@@ -1,0 +1,120 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  categoryLabel,
+  currentMonth,
+  formatDayTitle,
+  formatMoney,
+  formatMonthName,
+  formatMonthTitle,
+  formatOriginal,
+  formatPercent,
+  shiftMonth,
+  toNumber,
+} from "@/lib/format";
+
+const NBSP = " ";
+
+describe("formatMoney", () => {
+  it("группирует тысячи неразрывным пробелом как в мокапе", () => {
+    expect(formatMoney(4000)).toBe(`$4${NBSP}000`);
+  });
+
+  it("показывает копейки, когда их просят", () => {
+    expect(formatMoney(13.89, { decimals: 2 })).toBe("$13.89");
+  });
+
+  it("по умолчанию округляет до целых", () => {
+    expect(formatMoney(3414.27)).toBe(`$3${NBSP}414`);
+  });
+
+  it("рисует минус типографским знаком", () => {
+    expect(formatMoney(-13.89, { decimals: 2 })).toBe("−$13.89");
+  });
+
+  it("ставит плюс, когда просят знак", () => {
+    expect(formatMoney(586, { sign: "always" })).toBe("+$586");
+  });
+
+  it("не ставит плюс у отрицательной суммы даже в режиме always", () => {
+    expect(formatMoney(-586, { sign: "always" })).toBe("−$586");
+  });
+
+  it("понимает строки из API", () => {
+    expect(formatMoney("3406.7739")).toBe(`$3${NBSP}407`);
+  });
+
+  it("нулю не приписывает копейки", () => {
+    expect(formatMoney(0)).toBe("$0");
+  });
+
+  it("копейки округляются, а не обрезаются", () => {
+    expect(formatMoney(10.005, { decimals: 2 })).toBe("$10.01");
+  });
+
+  it("для валюты без своего знака ставит код", () => {
+    expect(formatMoney(100, { currency: "RSD" })).toBe(`RSD${NBSP}100`);
+  });
+});
+
+describe("formatOriginal", () => {
+  it("показывает сумму в валюте операции", () => {
+    expect(formatOriginal(1500, "RSD")).toBe(`1${NBSP}500${NBSP}RSD`);
+  });
+
+  it("сохраняет копейки, если они есть", () => {
+    expect(formatOriginal(12.5, "EUR")).toBe(`12.50${NBSP}EUR`);
+  });
+});
+
+describe("formatPercent", () => {
+  it("округляет долю до процентов", () => {
+    expect(formatPercent(0.854)).toBe("85%");
+  });
+
+  it("ставит знак у дельты", () => {
+    expect(formatPercent(0.41, { sign: true })).toBe("+41%");
+  });
+
+  it("отрицательную дельту рисует минусом", () => {
+    expect(formatPercent(-0.12, { sign: true })).toBe("−12%");
+  });
+});
+
+describe("даты", () => {
+  it("формирует заголовок месяца", () => {
+    expect(formatMonthTitle("2026-07")).toBe("Июль 2026");
+  });
+
+  it("даёт короткое имя месяца для табов", () => {
+    expect(formatMonthName("2026-05")).toBe("Май");
+  });
+
+  it("формирует заголовок дня в родительном падеже", () => {
+    expect(formatDayTitle("2026-07-31")).toBe("31 июля");
+  });
+
+  it("сдвигает месяц через границу года", () => {
+    expect(shiftMonth("2026-01", -1)).toBe("2025-12");
+    expect(shiftMonth("2026-12", 1)).toBe("2027-01");
+  });
+
+  it("определяет текущий месяц с ведущим нулём", () => {
+    expect(currentMonth(new Date(2026, 7, 2))).toBe("2026-08");
+  });
+});
+
+describe("вспомогательное", () => {
+  it("пустую категорию подписывает явно", () => {
+    expect(categoryLabel("")).toBe("Без категории");
+  });
+
+  it("хвостовые пробелы в имени категории не показываются", () => {
+    expect(categoryLabel("Продукты в магазинах ")).toBe("Продукты в магазинах");
+  });
+
+  it("нечисловое значение превращает в ноль", () => {
+    expect(toNumber("не число")).toBe(0);
+    expect(toNumber(null)).toBe(0);
+  });
+});
