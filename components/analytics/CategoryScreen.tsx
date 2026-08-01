@@ -41,27 +41,36 @@ export function CategoryScreen() {
   const currency = summary.data?.base_currency ?? "USD";
   const topCategories = (summary.data?.categories ?? []).slice(0, 6);
 
-  // без выбранной категории показываем ту, что съела больше всех
+  const chips = (
+    <div className="rule scroll-x flex gap-2 px-4 py-3">
+      {topCategories.map((item) => (
+        <button
+          key={item.category}
+          className={
+            item.category === selected ? "tag tag-outline shrink-0" : "tag tag-neutral shrink-0"
+          }
+          onClick={() => {
+            haptic();
+            router.push(`/category/${encodeURIComponent(item.category)}?month=${month}`);
+          }}
+        >
+          {categoryLabel(item.category)}
+        </button>
+      ))}
+    </div>
+  );
+
+  // вкладку открыли без категории — оставляем выбор за пользователем
   if (!selected) {
-    const fallback = topCategories[0]?.category;
     return (
       <Screen title="Аналитика" back="/">
         <AnalyticsTabs month={month} />
+        {topCategories.length ? chips : null}
         {summary.isPending ? <Loading /> : null}
-        {fallback !== undefined ? (
+        {summary.data ? (
           <EmptyState
             title="Выбери категорию"
             hint="Покажу, как траты по ней менялись по месяцам."
-            action={
-              <button
-                className="btn btn-primary"
-                onClick={() =>
-                  router.push(`/category/${encodeURIComponent(fallback)}?month=${month}`)
-                }
-              >
-                {categoryLabel(fallback)}
-              </button>
-            }
           />
         ) : null}
       </Screen>
@@ -81,22 +90,7 @@ export function CategoryScreen() {
     <Screen title="Аналитика" back={`/categories?month=${month}`}>
       <AnalyticsTabs month={month} />
 
-      <div className="rule scroll-x flex gap-2 px-4 py-3">
-        {topCategories.map((item) => (
-          <button
-            key={item.category}
-            className={
-              item.category === selected ? "tag tag-outline shrink-0" : "tag tag-neutral shrink-0"
-            }
-            onClick={() => {
-              haptic();
-              router.push(`/category/${encodeURIComponent(item.category)}?month=${month}`);
-            }}
-          >
-            {categoryLabel(item.category)}
-          </button>
-        ))}
-      </div>
+      {chips}
 
       {dynamics.isPending ? <Loading /> : null}
       {dynamics.isError ? (
