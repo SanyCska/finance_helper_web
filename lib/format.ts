@@ -160,3 +160,18 @@ export function monthFromDate(date: string): string {
 export function categoryLabel(name: string): string {
   return name.trim() === "" ? "Без категории" : name.trim();
 }
+
+/** Русское склонение: 1 операция, 2 операции, 5 операций. */
+export function plural(count: number, one: string, few: string, many: string): string {
+  const tens = Math.abs(count) % 100;
+  const units = Math.abs(count) % 10;
+  if (tens >= 11 && tens <= 14) return many;
+  if (units === 1) return one;
+  if (units >= 2 && units <= 4) return few;
+  return many;
+}
+
+/** «2 операции» — число вместе со склонённым словом. */
+export function pluralize(count: number, one: string, few: string, many: string): string {
+  return `${count} ${plural(count, one, few, many)}`;
+}

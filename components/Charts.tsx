@@ -114,6 +114,10 @@ export function MonthlyBars({
   const values = points.map((point) => toNumber(point.amount));
   const max = Math.max(...values, 1);
   const averageValue = average === undefined ? null : toNumber(average);
+  // если выбранный месяц вне окна, подсвечиваем последний столбец
+  const highlighted = points.some((point) => point.month === selected)
+    ? selected
+    : points.at(-1)?.month;
 
   return (
     <div>
@@ -129,8 +133,7 @@ export function MonthlyBars({
         ) : null}
         {points.map((point, index) => {
           const value = values[index];
-          const isSelected = selected === point.month;
-          const isLast = index === points.length - 1;
+          const isSelected = point.month === highlighted;
           return (
             <button
               key={point.month}
@@ -142,8 +145,7 @@ export function MonthlyBars({
               <span
                 style={{
                   height: `${Math.max(2, (value / max) * 100)}%`,
-                  background:
-                    isSelected || isLast ? "var(--color-accent)" : "var(--color-neutral-400)",
+                  background: isSelected ? "var(--color-accent)" : "var(--color-neutral-400)",
                 }}
               />
             </button>
@@ -151,13 +153,13 @@ export function MonthlyBars({
         })}
       </div>
       <div className="mt-2 flex gap-[3px]">
-        {points.map((point, index) => (
+        {points.map((point) => (
           <span
             key={point.month}
             className="flex-1 text-center text-[9px]"
             style={{
               color:
-                selected === point.month || index === points.length - 1
+                point.month === highlighted
                   ? "var(--color-text)"
                   : "var(--color-neutral-600)",
             }}

@@ -11,7 +11,14 @@ import { MonthStepper } from "@/components/MonthTabs";
 import { EmptyMonth, ErrorState, FxBanner, Loading } from "@/components/States";
 import { api, type CategorySlice } from "@/lib/api";
 import { buildColorMap, colorFor } from "@/lib/colorMap";
-import { categoryLabel, formatMoney, formatPercent, shiftMonth, toNumber } from "@/lib/format";
+import {
+  categoryLabel,
+  formatMoney,
+  formatPercent,
+  pluralize,
+  shiftMonth,
+  toNumber,
+} from "@/lib/format";
 import { useMonth } from "@/lib/useMonth";
 
 export function CategoriesScreen() {
@@ -132,8 +139,7 @@ function LegendRow({
       <div className="min-w-0 flex-1">
         <div className="truncate text-[14px] font-semibold">{categoryLabel(item.category)}</div>
         <div className="text-[11.5px]" style={{ color: "var(--color-neutral-700)" }}>
-          {formatPercent(item.share)} · {item.tx_count}{" "}
-          {item.tx_count === 1 ? "операция" : "операций"}
+          {formatPercent(item.share)} · {pluralize(item.tx_count, "операция", "операции", "операций")}
         </div>
       </div>
       <div className="shrink-0 text-right">
