@@ -2,8 +2,13 @@
 
 import { getInitData } from "@/lib/telegram";
 
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8010";
+/**
+ * Пусто — значит запрос идёт на тот же origin, а Next проксирует `/api/*`
+ * в бэкенд (см. `next.config.ts`). Так Mini App работает из-под https-туннеля
+ * без смешанного содержимого и без CORS. Переменная нужна, только если фронт
+ * и API живут на разных доменах.
+ */
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 export class ApiError extends Error {
   constructor(
@@ -18,16 +23,17 @@ export class ApiError extends Error {
 type Query = Record<string, string | number | boolean | string[] | undefined | null>;
 
 function buildUrl(path: string, query?: Query): string {
-  const url = new URL(path, API_BASE);
+  const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value === undefined || value === null || value === "") continue;
     if (Array.isArray(value)) {
-      for (const item of value) url.searchParams.append(key, item);
+      for (const item of value) params.append(key, item);
     } else {
-      url.searchParams.set(key, String(value));
+      params.set(key, String(value));
     }
   }
-  return url.toString();
+  const search = params.toString();
+  return `${API_BASE}${path}${search ? `?${search}` : ""}`;
 }
 
 async function request<T>(

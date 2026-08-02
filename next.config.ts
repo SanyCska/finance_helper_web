@@ -1,9 +1,17 @@
 import type { NextConfig } from "next";
 
+// Куда проксировать запросы к API. Прокси нужен, чтобы Mini App ходила в бэкенд
+// с того же origin: страница отдаётся по https через туннель, а прямой запрос
+// на http://localhost браузер заблокировал бы как смешанное содержимое.
+const API_TARGET = process.env.API_PROXY_TARGET ?? "http://127.0.0.1:8010";
+
 const config: NextConfig = {
   output: "standalone",
   // в домашней папке лежит чужой yarn.lock, из-за него Next выбирает не тот корень
   outputFileTracingRoot: import.meta.dirname,
+  rewrites: async () => [
+    { source: "/api/:path*", destination: `${API_TARGET}/api/:path*` },
+  ],
   // Telegram отдаёт Mini App во встроенном вебвью, кэш страниц там только мешает
   headers: async () => [
     {
