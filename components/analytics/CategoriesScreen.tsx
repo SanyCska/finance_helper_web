@@ -132,7 +132,7 @@ function LegendRow({
 
   return (
     <Link
-      href={`/category/${encodeURIComponent(item.category)}?month=${month}`}
+      href={`/category?name=${encodeURIComponent(item.category)}&month=${month}`}
       className="rule-thin flex items-center gap-3 py-3"
     >
       <span className="size-[10px] shrink-0" style={{ background: color }} />

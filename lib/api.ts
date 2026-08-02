@@ -25,7 +25,8 @@ type Query = Record<string, string | number | boolean | string[] | undefined | n
 function buildUrl(path: string, query?: Query): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {
-    if (value === undefined || value === null || value === "") continue;
+    // пустая строка — осмысленное значение: так называется категория «Без категории»
+    if (value === undefined || value === null) continue;
     if (Array.isArray(value)) {
       for (const item of value) params.append(key, item);
     } else {
@@ -110,13 +111,14 @@ export type MonthSummary = {
 
 export type MonthPoint = { month: string; amount: string; tx_count: number };
 
-export type CategoryDynamics = {
-  category: string;
+export type Dynamics = {
   points: MonthPoint[];
   average: string;
   total: string;
   delta_pct: string | null;
 };
+
+export type CategoryDynamics = Dynamics & { category: string };
 
 export type CategoryDiff = {
   category: string;
@@ -207,6 +209,9 @@ export const api = {
 
   categories: (month: string) =>
     request<CategorySlice[]>("/api/stats/categories", { query: { month } }),
+
+  totalDynamics: (months: number, until?: string) =>
+    request<Dynamics>("/api/stats/dynamics", { query: { months, until } }),
 
   categoryDynamics: (category: string, months: number, until?: string) =>
     request<CategoryDynamics>("/api/stats/category-dynamics", {

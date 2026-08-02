@@ -1,12 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { AnalyticsTabs } from "@/components/analytics/AnalyticsTabs";
 import { MonthlyBars } from "@/components/Charts";
 import { Screen } from "@/components/Chrome";
-import { EmptyState, ErrorState, Loading } from "@/components/States";
+import { ErrorState, Loading } from "@/components/States";
 import { api } from "@/lib/api";
 import {
   categoryLabel,
@@ -21,13 +21,22 @@ import { useMonthWindow } from "@/lib/useMonth";
 
 const WINDOW_MONTHS = 6;
 
+/**
+ * Значения в списке. Имя категории может быть любым, включая пустую строку
+ * («Без категории»), поэтому у категорий свой префикс, а «все траты» — отдельное слово.
+ */
+const ALL = "all";
+const CATEGORY_PREFIX = "c:";
+
 export function CategoryScreen() {
-  const params = useParams<{ name?: string }>();
+  const params = useSearchParams();
   const router = useRouter();
   const { month, anchor, selectMonth, shiftWindow, canGoForward } =
     useMonthWindow(WINDOW_MONTHS);
 
-  const selected = params.name ? decodeURIComponent(params.name) : null;
+  // нет параметра — все траты; пустая строка — категория «Без категории»
+  const selected = params.has("name") ? (params.get("name") ?? "") : null;
+  const title = selected === null ? "Все траты" : categoryLabel(selected);
 
   const summary = useQuery({
     queryKey: ["month", month],
@@ -46,8 +55,10 @@ export function CategoryScreen() {
 
   const dynamics = useQuery({
     queryKey: ["dynamics", selected, anchor],
-    queryFn: () => api.categoryDynamics(selected as string, WINDOW_MONTHS, anchor),
-    enabled: Boolean(selected),
+    queryFn: () =>
+      selected === null
+        ? api.totalDynamics(WINDOW_MONTHS, anchor)
+        : api.categoryDynamics(selected, WINDOW_MONTHS, anchor),
   });
 
   const currency = summary.data?.base_currency ?? "USD";
@@ -59,53 +70,19 @@ export function CategoryScreen() {
     .map((item) => item.name)
     // категории вне подсчётов показывать нечем: график по ним всегда нулевой
     .filter((name) => !excluded.has(name.trim().toLowerCase()));
-  // выбранная категория обязана быть в списке, даже если трат по ней давно не было
-  const allNames = selected !== null && !names.includes(selected) ? [selected, ...names] : names;
-  // категорий за годы накопилось два десятка, поэтому список, а не полоса чипсов
+  const allNames =
+    selected !== null && !names.includes(selected) ? [selected, ...names] : names;
+  // категорий за годы накопилось несколько десятков, поэтому список, а не полоса чипсов
   const options = [...allNames].sort((a, b) =>
     categoryLabel(a).localeCompare(categoryLabel(b), "ru"),
   );
 
-  const goTo = (name: string) => {
+  const goTo = (value: string) => {
     haptic();
-    router.push(`/category/${encodeURIComponent(name)}?month=${month}&until=${anchor}`);
+    const query = new URLSearchParams({ month, until: anchor });
+    if (value !== ALL) query.set("name", value.slice(CATEGORY_PREFIX.length));
+    router.replace(`/category?${query.toString()}`, { scroll: false });
   };
-
-  const picker = (
-    <label className="rule block px-4 py-3">
-      <span className="eyebrow mb-1 block" style={{ color: "var(--color-neutral-700)" }}>
-        Категория
-      </span>
-      <select
-        className="heading w-full bg-transparent text-[16px]"
-        value={selected ?? ""}
-        onChange={(event) => goTo(event.target.value)}
-      >
-        {selected === null ? <option value="">Выбери категорию</option> : null}
-        {options.map((name) => (
-          <option key={name} value={name}>
-            {categoryLabel(name)}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-
-  if (!selected) {
-    return (
-      <Screen title="Аналитика" back="/">
-        <AnalyticsTabs month={month} />
-        {options.length ? picker : null}
-        {categories.isPending ? <Loading /> : null}
-        {categories.data ? (
-          <EmptyState
-            title="Выбери категорию"
-            hint="Покажу, как траты по ней менялись по месяцам."
-          />
-        ) : null}
-      </Screen>
-    );
-  }
 
   const points = dynamics.data?.points ?? [];
   const index = points.findIndex((point) => point.month === month);
@@ -119,16 +96,31 @@ export function CategoryScreen() {
       ? (currentAmount - previousAmount) / previousAmount
       : null;
   const maxAmount = Math.max(...points.map((point) => toNumber(point.amount)), 0);
-  const share =
-    toNumber(summary.data?.outcome_total) > 0
-      ? currentAmount / toNumber(summary.data?.outcome_total)
-      : null;
+
+  const monthTotal = toNumber(summary.data?.outcome_total);
+  const share = selected !== null && monthTotal > 0 ? currentAmount / monthTotal : null;
 
   return (
-    <Screen title="Аналитика" back={`/categories?month=${month}`}>
+    <Screen title="Аналитика" back="/">
       <AnalyticsTabs month={month} />
 
-      {picker}
+      <label className="rule block px-4 py-3">
+        <span className="eyebrow mb-1 block" style={{ color: "var(--color-neutral-700)" }}>
+          Что показать
+        </span>
+        <select
+          className="heading w-full bg-transparent text-[16px]"
+          value={selected === null ? ALL : CATEGORY_PREFIX + selected}
+          onChange={(event) => goTo(event.target.value)}
+        >
+          <option value={ALL}>Все траты</option>
+          {options.map((name) => (
+            <option key={name} value={CATEGORY_PREFIX + name}>
+              {categoryLabel(name)}
+            </option>
+          ))}
+        </select>
+      </label>
 
       {dynamics.isPending ? <Loading /> : null}
       {dynamics.isError ? (
@@ -149,8 +141,7 @@ export function CategoryScreen() {
                 <span
                   className="num text-[13px] font-extrabold"
                   style={{
-                    color:
-                      delta >= 0 ? "var(--color-accent)" : "var(--color-neutral-600)",
+                    color: delta >= 0 ? "var(--color-accent)" : "var(--color-neutral-600)",
                   }}
                 >
                   {delta >= 0 ? "↗ " : "↘ "}
@@ -159,7 +150,7 @@ export function CategoryScreen() {
               ) : null}
             </div>
             <div className="mt-2 text-[12px]" style={{ color: "var(--color-neutral-700)" }}>
-              {categoryLabel(selected)} · {formatMonthTitle(month)} ·{" "}
+              {title} · {formatMonthTitle(month)} ·{" "}
               {pluralize(current?.tx_count ?? 0, "операция", "операции", "операций")}
             </div>
           </section>
@@ -212,7 +203,11 @@ export function CategoryScreen() {
           <section className="rule flex">
             <Stat label="Среднее" value={formatMoney(dynamics.data.average, { currency })} />
             <Stat label="Максимум" value={formatMoney(maxAmount, { currency })} />
-            <Stat label="Доля" value={share === null ? "—" : formatPercent(share)} last />
+            {selected === null ? (
+              <Stat label="Всего" value={formatMoney(dynamics.data.total, { currency })} last />
+            ) : (
+              <Stat label="Доля" value={share === null ? "—" : formatPercent(share)} last />
+            )}
           </section>
 
           <section className="px-4 py-4">
