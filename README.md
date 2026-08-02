@@ -66,5 +66,9 @@ flex. Библиотека чартов потребовала бы больше
 ```bash
 npm run test
 npm run typecheck
-npm run build
 ```
+
+`npm run build` не запускайте, пока работает `npm run dev`: обе команды пишут
+в один каталог `.next`, продакшен-сборка перетирает манифесты дев-сервера,
+и он падает с `__webpack_modules__[moduleId] is not a function`. Лечится
+остановкой сервера, `rm -rf .next` и повторным запуском.
