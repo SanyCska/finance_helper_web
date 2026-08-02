@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   categoryLabel,
   currentMonth,
+  formatDateFull,
   formatDayTitle,
   formatMoney,
   formatMonthName,
@@ -93,6 +94,14 @@ describe("даты", () => {
 
   it("формирует заголовок дня в родительном падеже", () => {
     expect(formatDayTitle("2026-07-31")).toBe("31 июля");
+  });
+
+  it("показывает полную дату как день.месяц.год", () => {
+    expect(formatDateFull("2026-07-31")).toBe("31.07.2026");
+  });
+
+  it("не ломается на неполной дате", () => {
+    expect(formatDateFull("2026-07")).toBe("2026-07");
   });
 
   it("сдвигает месяц через границу года", () => {

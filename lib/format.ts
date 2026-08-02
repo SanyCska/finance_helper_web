@@ -142,6 +142,13 @@ export function formatDayShort(date: string): string {
   return `${day}.${month}`;
 }
 
+/** `'2026-07-31'` → `'31.07.2026'` — день/месяц/год, независимо от локали ОС. */
+export function formatDateFull(date: string): string {
+  const [year, month, day] = date.split("-");
+  if (!year || !month || !day) return date;
+  return `${day}.${month}.${year}`;
+}
+
 export function currentMonth(today: Date = new Date()): string {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 }

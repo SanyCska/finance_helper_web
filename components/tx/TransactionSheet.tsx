@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { DateField } from "@/components/DateField";
 import { CURRENCIES } from "@/components/tx/AddScreen";
 import { api, ApiError, type Transaction } from "@/lib/api";
 import { categoryLabel, formatDayTitle, formatOriginal, toNumber } from "@/lib/format";
@@ -172,14 +173,7 @@ function EditForm({ item, onClose }: { item: Transaction; onClose: () => void })
 
       <div className="field">
         <label htmlFor="edit-date">Дата</label>
-        <input
-          id="edit-date"
-          type="date"
-          className="input"
-          value={date}
-          max={today()}
-          onChange={(event) => setDate(event.target.value)}
-        />
+        <DateField id="edit-date" value={date} max={today()} onChange={setDate} />
       </div>
 
       <div className="field">
