@@ -243,6 +243,19 @@ export const api = {
     comment?: string | null;
   }) => request<Transaction>("/api/transactions", { method: "POST", body }),
 
+  updateTransaction: (
+    id: number,
+    body: {
+      date?: string;
+      category_name?: string;
+      account_name?: string;
+      amount_original?: string;
+      currency?: string;
+      direction?: "outcome" | "income";
+      comment?: string | null;
+    },
+  ) => request<Transaction>(`/api/transactions/${id}`, { method: "PATCH", body }),
+
   deleteTransaction: (id: number) =>
     request<void>(`/api/transactions/${id}`, { method: "DELETE" }),
 

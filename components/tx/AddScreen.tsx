@@ -10,7 +10,7 @@ import { categoryLabel } from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
 import { useMonth } from "@/lib/useMonth";
 
-const CURRENCIES = ["USD", "EUR", "RSD", "RUB", "ARS", "USDT"];
+export const CURRENCIES = ["USD", "EUR", "RSD", "RUB", "ARS", "USDT"];
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);

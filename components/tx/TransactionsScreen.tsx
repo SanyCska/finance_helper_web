@@ -7,7 +7,8 @@ import { Screen } from "@/components/Chrome";
 import { MonthStepper } from "@/components/MonthTabs";
 import { EmptyState, ErrorState, Loading } from "@/components/States";
 import { groupByDay, TransactionRows } from "@/components/tx/TransactionList";
-import { api } from "@/lib/api";
+import { TransactionSheet } from "@/components/tx/TransactionSheet";
+import { api, type Transaction } from "@/lib/api";
 import { buildColorMap } from "@/lib/colorMap";
 import { categoryLabel, formatMoney, toNumber } from "@/lib/format";
 import { haptic } from "@/lib/telegram";
@@ -20,6 +21,7 @@ export function TransactionsScreen() {
   const [selected, setSelected] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [openedTx, setOpenedTx] = useState<Transaction | null>(null);
 
   const transactions = useQuery({
     queryKey: ["transactions", month, selected, query],
@@ -111,8 +113,20 @@ export function TransactionsScreen() {
         />
       ) : null}
 
-      <TransactionRows groups={groups} colors={colors} currency={currency} />
+      <TransactionRows
+        groups={groups}
+        colors={colors}
+        currency={currency}
+        onSelect={(item) => {
+          haptic();
+          setOpenedTx(item);
+        }}
+      />
       <div className="h-6" />
+
+      {openedTx ? (
+        <TransactionSheet item={openedTx} onClose={() => setOpenedTx(null)} />
+      ) : null}
     </Screen>
   );
 }
