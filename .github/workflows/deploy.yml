@@ -1,0 +1,83 @@
+# Деплой фронта: тесты → build → GHCR → SSH на VPS, рестарт только
+# контейнера web. Compose-стек и .env живут в /opt/finance и деплоятся
+# из finance_helper_back — этот workflow требует, чтобы стек хотя бы раз
+# был задеплоен оттуда. Секреты и runbook — finance_helper_back/docs/deploy.md.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/sanycska/finance-helper-web
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test
+      - run: npm run typecheck
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # адрес API вшивается в сборку (rewrites компилируются на build),
+          # http://api:8000 — имя сервиса из /opt/finance/docker-compose.yml
+          build-args: |
+            API_PROXY_TARGET=http://api:8000
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+    steps:
+      - name: Настроить SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Обновить web на сервере
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        run: |
+          printf '%s' "$GHCR_PAT" | ssh "$SSH_USER@$SSH_HOST" 'docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin'
+          ssh "$SSH_USER@$SSH_HOST" 'cd /opt/finance \
+            && docker compose pull web \
+            && docker compose up -d web \
+            && docker image prune -f'
