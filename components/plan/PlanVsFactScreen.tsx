@@ -8,9 +8,15 @@ import { Screen } from "@/components/Chrome";
 import { MonthStepper } from "@/components/MonthTabs";
 import { PlanTabs } from "@/components/plan/PlanTabs";
 import { EmptyState, ErrorState, Loading } from "@/components/States";
-import { api } from "@/lib/api";
+import { api, type PlanLineFact } from "@/lib/api";
 import { buildColorMap, colorFor } from "@/lib/colorMap";
-import { categoryLabel, formatMoney, formatPercent, toNumber } from "@/lib/format";
+import {
+  categoryLabel,
+  formatMoney,
+  formatOriginal,
+  formatPercent,
+  toNumber,
+} from "@/lib/format";
 import { useMonth } from "@/lib/useMonth";
 
 const FACT_CATEGORIES = 6;
@@ -87,42 +93,108 @@ export function PlanVsFactScreen() {
           </section>
 
           <section className="px-4 pt-4">
-            <div className="heading mb-2 text-[12px] tracking-[0.08em] uppercase">
-              Что планировал
+            <div className="heading mb-1 text-[12px] tracking-[0.08em] uppercase">
+              Строки плана против факта
+            </div>
+            <div className="mb-2 flex gap-2 text-[10px]" style={{ color: "var(--color-neutral-600)" }}>
+              <span className="flex-1">название</span>
+              <span className="w-16 text-right">план</span>
+              <span className="w-16 text-right">факт</span>
             </div>
             {data.data.lines.map((line) => (
-              <div key={line.id} className="rule-thin flex items-baseline justify-between py-2">
-                <span className="truncate text-[13px]">{line.title || "Без названия"}</span>
-                <span className="num text-[13px] font-semibold">{formatMoney(line.amount)}</span>
-              </div>
+              <LineRow key={line.id} line={line} />
             ))}
+            {data.data.lines.every((line) => line.category_name === null) ? (
+              <p
+                className="py-2 text-[11.5px] leading-[1.5]"
+                style={{ color: "var(--color-neutral-600)" }}
+              >
+                Ни одна строка не связана с категорией — сравнить с фактом нечем. Категорию
+                можно выбрать под названием строки на вкладке «Планирую».
+              </p>
+            ) : null}
           </section>
 
-          <section className="px-4 pt-4">
-            <div className="heading mb-2 text-[12px] tracking-[0.08em] uppercase">
-              Куда ушло по факту
-            </div>
-            {data.data.categories.slice(0, FACT_CATEGORIES).map((item) => (
-              <div key={item.category} className="rule-thin flex items-center gap-3 py-2">
-                <span
-                  className="size-[9px] shrink-0"
-                  style={{ background: colorFor(colors, item.category) }}
-                />
-                <span className="flex-1 truncate text-[13px]">
-                  {categoryLabel(item.category)}
-                </span>
-                <span className="num text-[13px] font-semibold">
-                  {formatMoney(item.amount)}
-                </span>
+          {data.data.unplanned.length ? (
+            <section className="px-4 pt-4">
+              <div className="heading mb-2 text-[12px] tracking-[0.08em] uppercase">
+                Мимо плана
               </div>
-            ))}
-          </section>
+              {data.data.unplanned.slice(0, FACT_CATEGORIES).map((item) => (
+                <div key={item.category} className="rule-thin flex items-center gap-3 py-2">
+                  <span
+                    className="size-[9px] shrink-0"
+                    style={{ background: colorFor(colors, item.category) }}
+                  />
+                  <span className="flex-1 truncate text-[13px]">
+                    {categoryLabel(item.category)}
+                  </span>
+                  <span className="num text-[13px] font-semibold">
+                    {formatMoney(item.amount)}
+                  </span>
+                </div>
+              ))}
+            </section>
+          ) : null}
 
           <Verdict diff={diff} planTotal={planTotal} />
         </>
       ) : null}
       <div className="h-6" />
     </Screen>
+  );
+}
+
+/** Строка плана рядом с фактом по связанной категории. */
+function LineRow({ line }: { line: PlanLineFact }) {
+  const fact = line.fact === null ? null : toNumber(line.fact);
+  const planned = toNumber(line.amount_base);
+  const over = fact !== null && fact > planned;
+
+  return (
+    <div className="rule-thin py-2">
+      <div className="flex items-baseline gap-2">
+        <span className="min-w-0 flex-1 truncate text-[13px]">
+          {line.title || "Без названия"}
+        </span>
+        <span className="num w-16 text-right text-[13px] font-semibold">
+          {formatMoney(planned)}
+        </span>
+        <span
+          className="num w-16 text-right text-[13px] font-semibold"
+          style={{
+            color:
+              fact === null
+                ? "var(--color-neutral-500)"
+                : over
+                  ? "var(--color-accent)"
+                  : "var(--color-text)",
+          }}
+        >
+          {fact === null ? "—" : formatMoney(fact)}
+        </span>
+      </div>
+      <div className="mt-[2px] flex items-baseline gap-2">
+        <span className="min-w-0 flex-1 truncate text-[11px]" style={{ color: "var(--color-neutral-600)" }}>
+          {line.category_name === null
+            ? "категория не выбрана"
+            : categoryLabel(line.category_name)}
+          {line.currency === "USD"
+            ? ""
+            : ` · ${formatOriginal(line.amount, line.currency)}`}
+        </span>
+        {/* расхождение меньше доллара после округления показалось бы как «−$0» */}
+        {line.diff === null || Math.abs(toNumber(line.diff)) < 0.5 ? null : (
+          <span
+            className="num text-[11px] font-extrabold"
+            style={{ color: over ? "var(--color-accent)" : "var(--color-neutral-600)" }}
+          >
+            {toNumber(line.diff) >= 0 ? "+" : "−"}
+            {formatMoney(Math.abs(toNumber(line.diff)))}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 

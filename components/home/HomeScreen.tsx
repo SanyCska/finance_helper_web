@@ -175,7 +175,8 @@ function HomeBody({ data, month }: { data: MonthSummary; month: string }) {
                   {categoryLabel(item.category_name)}
                 </div>
                 <div className="text-[11px]" style={{ color: "var(--color-neutral-700)" }}>
-                  {formatDayTitle(item.date)} · {item.account_name.trim()}
+                  {formatDayTitle(item.date)} ·{" "}
+                  {item.comment?.trim() || item.account_name.trim()}
                 </div>
               </div>
               <div className="num text-[13px] font-semibold">

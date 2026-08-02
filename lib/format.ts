@@ -117,6 +117,13 @@ export function formatMonthTitle(month: string): string {
   return name ? `${name} ${year}` : month;
 }
 
+/** `'2026-07'` → `'июля 2026'` — для оборотов вроде «на конец июля 2026». */
+export function formatMonthGenitive(month: string): string {
+  const [year, index] = month.split("-");
+  const name = MONTHS_GENITIVE[Number(index) - 1];
+  return name ? `${name} ${year}` : month;
+}
+
 /** `'2026-07'` → `'Июль'`. */
 export function formatMonthName(month: string): string {
   const index = Number(month.split("-")[1]);
