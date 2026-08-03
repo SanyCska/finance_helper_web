@@ -10,7 +10,14 @@ import { PlanTabs } from "@/components/plan/PlanTabs";
 import { ErrorState, Loading } from "@/components/States";
 import { CURRENCIES } from "@/components/tx/AddScreen";
 import { api, type Recurring, type RecurringKind } from "@/lib/api";
-import { categoryLabel, formatDayTitle, formatMoney, formatOriginal, toNumber } from "@/lib/format";
+import {
+  categoryLabel,
+  formatDayTitle,
+  formatMoney,
+  formatOriginal,
+  parseAmount,
+  toNumber,
+} from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
 import { useMonth } from "@/lib/useMonth";
 
@@ -198,7 +205,7 @@ function AddForm({
       api.createRecurring({
         kind: group.kind,
         title: title.trim(),
-        amount: String(Number(amount.replace(",", ".")) || 0),
+        amount: String(parsed),
         currency,
         period_months: period,
         charge_on: chargeOn,
@@ -212,7 +219,7 @@ function AddForm({
     onError: () => notify("error"),
   });
 
-  const parsed = Number(amount.replace(",", "."));
+  const parsed = parseAmount(amount);
 
   return (
     <div className="rule-thin flex flex-col gap-3 py-3">
@@ -318,7 +325,7 @@ function Row({ item, currency }: { item: Recurring; currency: string }) {
   const save = useMutation({
     mutationFn: () =>
       api.updateRecurring(item.id, {
-        amount: String(Number(amount.replace(",", ".")) || 0),
+        amount: String(parseAmount(amount)),
       }),
     onSuccess: () => {
       notify("success");

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Screen } from "@/components/Chrome";
 import { DateField } from "@/components/DateField";
 import { api, ApiError } from "@/lib/api";
-import { categoryLabel } from "@/lib/format";
+import { categoryLabel, parseAmount } from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
 import { useMonth } from "@/lib/useMonth";
 
@@ -41,7 +41,7 @@ export function AddScreen() {
         date,
         category_name: category,
         account_name: account,
-        amount_original: amount.replace(",", "."),
+        amount_original: String(parsedAmount),
         currency,
         direction,
         comment: comment || null,
@@ -54,7 +54,7 @@ export function AddScreen() {
     onError: () => notify("error"),
   });
 
-  const parsedAmount = Number(amount.replace(",", "."));
+  const parsedAmount = parseAmount(amount);
   const canSubmit = Number.isFinite(parsedAmount) && parsedAmount > 0 && !create.isPending;
 
   // пустую категорию из подсказок убираем: чтобы её выбрать, достаточно

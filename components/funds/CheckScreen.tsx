@@ -62,7 +62,19 @@ export function CheckScreen() {
         />
       ) : null}
 
-      {check.data && hasSources ? (
+      {check.data && hasSources && !check.data.comparable ? (
+        <EmptyState
+          title="Это первый месяц учёта"
+          hint="Сверять не с чем: остатка на начало месяца нет, и вся сумма на счетах выглядела бы незаписанным доходом. Сверка появится со следующего месяца."
+          action={
+            <Link href="/funds" className="btn btn-secondary">
+              К источникам
+            </Link>
+          }
+        />
+      ) : null}
+
+      {check.data && hasSources && check.data.comparable ? (
         <>
           <section className="rule px-4 py-4">
             <div className="eyebrow mb-2" style={{ color: "var(--color-accent)" }}>

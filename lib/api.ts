@@ -258,6 +258,8 @@ export type MonthCheck = {
   opening: string | null;
   closing: string | null;
   is_saved: boolean;
+  /** есть ли остаток на начало месяца; без него сверять не с чем */
+  comparable: boolean;
   note: string | null;
 };
 
@@ -416,6 +418,19 @@ export const api = {
     request<FundSource>(`/api/funds/${id}/balance`, { method: "PUT", body }),
 
   balanceHistory: (id: number) => request<FundBalance[]>(`/api/funds/${id}/history`),
+
+  updateBalance: (
+    sourceId: number,
+    balanceId: number,
+    body: { amount?: string; date?: string; note?: string | null },
+  ) =>
+    request<FundBalance>(`/api/funds/${sourceId}/balance/${balanceId}`, {
+      method: "PATCH",
+      body,
+    }),
+
+  deleteBalance: (sourceId: number, balanceId: number) =>
+    request<void>(`/api/funds/${sourceId}/balance/${balanceId}`, { method: "DELETE" }),
 
   checks: () => request<MonthCheck[]>("/api/funds/checks"),
 

@@ -8,7 +8,13 @@ import { Screen } from "@/components/Chrome";
 import { PlanTabs } from "@/components/plan/PlanTabs";
 import { ErrorState, Loading } from "@/components/States";
 import { api, type PlanSource } from "@/lib/api";
-import { formatMonthGenitive, formatMonthTitle, formatMoney, toNumber } from "@/lib/format";
+import {
+  formatMonthGenitive,
+  formatMonthTitle,
+  formatMoney,
+  parseAmount,
+  toNumber,
+} from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
 import { useMonth } from "@/lib/useMonth";
 
@@ -76,7 +82,7 @@ export function PlanScreen() {
           .filter((line) => line.title.trim() || Number(line.amount) > 0)
           .map((line) => ({
             title: line.title.trim(),
-            amount: String(Number(line.amount.replace(",", ".")) || 0),
+            amount: String(lineAmount(line.amount)),
             currency: line.currency,
             category_names: line.categories,
           })),
@@ -95,7 +101,7 @@ export function PlanScreen() {
   // до сохранения итог считаем сами: курс берём из уже пересчитанных сервером строк
   const rates = rateMap(plan.data?.lines ?? []);
   const total = lines.reduce((sum, line) => {
-    const value = Number(line.amount.replace(",", ".")) || 0;
+    const value = lineAmount(line.amount);
     return sum + value * (rates[line.currency] ?? 1);
   }, 0);
   const incomeAmount = toNumber(income.data?.amount);
@@ -263,6 +269,12 @@ export function PlanScreen() {
   );
 }
 
+/** Сумма строки плана: пустое поле — осмысленный ноль, а не «не число». */
+function lineAmount(text: string): number {
+  const parsed = parseAmount(text);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 /**
  * Курсы валют, выведенные из ответа сервера: он присылает и сумму строки,
  * и её эквивалент в базовой валюте. Отдельного запроса за курсами нет —
@@ -387,7 +399,7 @@ function IncomeBlock({
 
   const save = useMutation({
     mutationFn: () =>
-      api.setIncome(month, { amount: String(Number(value.replace(",", ".")) || 0) }),
+      api.setIncome(month, { amount: String(lineAmount(value)) }),
     onSuccess: () => {
       notify("success");
       setEditing(false);

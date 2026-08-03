@@ -54,6 +54,24 @@ const CURRENCY_SIGNS: Record<string, string> = {
   RUB: "₽",
 };
 
+/**
+ * Число из поля ввода: `'1 250,50'` → `1250.5`, мусор → `NaN`.
+ *
+ * Большие суммы набирают с разделителем разрядов, а формат сумм в аппе сам
+ * подставляет неразрывный пробел — если скормить такую строку `Number`,
+ * получится `NaN`. Раньше он превращался в ноль, и сумма молча пропадала;
+ * заметнее всего на рублях, где без разделителя почти не пишут.
+ */
+export function parseAmount(value: string): number {
+  const cleaned = (value ?? "")
+    // обычный, неразрывный и узкий неразрывный пробел плюс апостроф
+    .replace(/[\s  '’]/g, "")
+    .replace(",", ".");
+  if (cleaned === "") return Number.NaN;
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
 export function toNumber(value: string | number | null | undefined): number {
   if (value === null || value === undefined || value === "") return 0;
   const parsed = typeof value === "number" ? value : Number(value);
