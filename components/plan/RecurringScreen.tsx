@@ -392,12 +392,25 @@ function Row({ item, currency }: { item: Recurring; currency: string }) {
               setEditing(true);
             }}
           >
-            <div className="heading num text-[16px]">
-              {formatMoney(item.monthly_amount_base, { currency })}
-            </div>
-            <div className="num text-[11px]" style={{ color: "var(--color-neutral-700)" }}>
-              {chargeNote(item, currency)}
-            </div>
+            {item.monthly_amount_base === null ? (
+              <>
+                <div className="num text-[13px] font-semibold">
+                  {formatOriginal(item.monthly_amount, item.currency)}
+                </div>
+                <div className="text-[11px]" style={{ color: "var(--color-accent-700)" }}>
+                  курс не найден
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="heading num text-[16px]">
+                  {formatMoney(item.monthly_amount_base, { currency })}
+                </div>
+                <div className="num text-[11px]" style={{ color: "var(--color-neutral-700)" }}>
+                  {chargeNote(item, currency)}
+                </div>
+              </>
+            )}
           </button>
         )}
       </div>

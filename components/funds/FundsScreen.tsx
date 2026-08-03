@@ -9,7 +9,7 @@ import { Screen } from "@/components/Chrome";
 import { CURRENCIES } from "@/components/tx/AddScreen";
 import { FundSourceSheet } from "@/components/funds/FundSourceSheet";
 import { FundsTabs } from "@/components/funds/FundsTabs";
-import { EmptyState, ErrorState, Loading } from "@/components/States";
+import { EmptyState, ErrorState, FxBanner, Loading } from "@/components/States";
 import { api, type BalancePoint, type FundSource } from "@/lib/api";
 import {
   formatDateFull,
@@ -69,6 +69,14 @@ export function FundsScreen() {
               </span>
             </Link>
           ) : null}
+
+          <FxBanner
+            count={funds.data.pending_fx}
+            subject={(count) =>
+              `Для ${pluralize(count, "источника", "источников", "источников")} ` +
+              "не нашлись курсы валют — они не попадают в итог."
+            }
+          />
 
           <section className="rule px-4 py-4">
             <div className="eyebrow mb-2" style={{ color: "var(--color-accent)" }}>
@@ -299,13 +307,26 @@ function SourceRow({
               setEditing(true);
             }}
           >
-            <div className="heading num text-[16px]">
-              {formatMoney(source.amount_base, { currency: baseCurrency })}
-            </div>
-            {isBase ? null : (
-              <div className="num text-[11px]" style={{ color: "var(--color-neutral-700)" }}>
-                {formatOriginal(source.amount_original, source.currency)}
-              </div>
+            {source.amount_base === null ? (
+              <>
+                <div className="num text-[13px] font-semibold">
+                  {formatOriginal(source.amount_original, source.currency)}
+                </div>
+                <div className="text-[11px]" style={{ color: "var(--color-accent-700)" }}>
+                  курс не найден
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="heading num text-[16px]">
+                  {formatMoney(source.amount_base, { currency: baseCurrency })}
+                </div>
+                {isBase ? null : (
+                  <div className="num text-[11px]" style={{ color: "var(--color-neutral-700)" }}>
+                    {formatOriginal(source.amount_original, source.currency)}
+                  </div>
+                )}
+              </>
             )}
           </button>
         )}

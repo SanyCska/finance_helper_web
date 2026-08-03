@@ -236,6 +236,8 @@ export type Funds = {
   history: BalancePoint[];
   /** месяц, который пора сверить */
   pending_check: string | null;
+  /** источники без курса: их сумма в долларах неизвестна */
+  pending_fx: number;
 };
 
 export type FundBalance = {

@@ -76,8 +76,22 @@ export function EmptyMonth() {
   );
 }
 
-/** Баннер о ненайденных курсах: без них суммы в долларах неизвестны. */
-export function FxBanner({ count }: { count: number }) {
+function defaultSubject(count: number): string {
+  const word = count === 1 ? "операции" : "операций";
+  return `Для ${count} ${word} не нашлись курсы валют — они не попадают в итоги.`;
+}
+
+/**
+ * Баннер о ненайденных курсах: без них суммы в долларах неизвестны.
+ * `subject` описывает, что именно осталось без курса — операции или источники.
+ */
+export function FxBanner({
+  count,
+  subject,
+}: {
+  count: number;
+  subject?: (count: number) => string;
+}) {
   const queryClient = useQueryClient();
   const backfill = useMutation({
     mutationFn: () => api.backfillRates(),
@@ -94,7 +108,7 @@ export function FxBanner({ count }: { count: number }) {
       <div className="flex-1 text-[11.5px]" style={{ color: "var(--color-accent-800)" }}>
         {backfill.isSuccess
           ? `Догружено курсов: ${backfill.data.filled}. Осталось без курса: ${backfill.data.pending_left}.`
-          : `Для ${count} ${count === 1 ? "операции" : "операций"} не нашлись курсы валют — они не попадают в итоги.`}
+          : (subject ?? defaultSubject)(count)}
       </div>
       <button
         className="btn btn-secondary shrink-0 text-[12px]"
