@@ -7,6 +7,7 @@ import { useState } from "react";
 import { MonthlyBars } from "@/components/Charts";
 import { Screen } from "@/components/Chrome";
 import { CURRENCIES } from "@/components/tx/AddScreen";
+import { FundSourceSheet } from "@/components/funds/FundSourceSheet";
 import { FundsTabs } from "@/components/funds/FundsTabs";
 import { EmptyState, ErrorState, Loading } from "@/components/States";
 import { api, type BalancePoint, type FundSource } from "@/lib/api";
@@ -15,6 +16,7 @@ import {
   formatMoney,
   formatMonthTitle,
   formatOriginal,
+  parseAmount,
   pluralize,
   toNumber,
 } from "@/lib/format";
@@ -26,6 +28,7 @@ const HISTORY_MONTHS = 12;
 export function FundsScreen() {
   const [month] = useMonth();
   const [adding, setAdding] = useState(false);
+  const [openSource, setOpenSource] = useState<number | null>(null);
 
   const funds = useQuery({
     queryKey: ["funds", HISTORY_MONTHS],
@@ -37,6 +40,7 @@ export function FundsScreen() {
   // месяцы до первого снимка — не нули, а отсутствие данных: их не рисуем
   const history = trimLeadingEmpty(funds.data?.history ?? []);
   const hasHistory = history.length > 1;
+  const opened = funds.data?.sources.find((item) => item.id === openSource) ?? null;
 
   return (
     <Screen title="Средства">
@@ -110,7 +114,12 @@ export function FundsScreen() {
             {adding ? <AddSource onDone={() => setAdding(false)} /> : null}
 
             {funds.data.sources.map((source) => (
-              <SourceRow key={source.id} source={source} baseCurrency={currency} />
+              <SourceRow
+                key={source.id}
+                source={source}
+                baseCurrency={currency}
+                onOpen={() => setOpenSource(source.id)}
+              />
             ))}
           </section>
 
@@ -128,6 +137,14 @@ export function FundsScreen() {
         </>
       ) : null}
       <div className="h-6" />
+
+      {opened ? (
+        <FundSourceSheet
+          source={opened}
+          baseCurrency={currency}
+          onClose={() => setOpenSource(null)}
+        />
+      ) : null}
     </Screen>
   );
 }
@@ -143,12 +160,17 @@ function AddSource({ onDone }: { onDone: () => void }) {
   const [currency, setCurrency] = useState("USD");
   const [amount, setAmount] = useState("");
 
+  // пустое поле — источник заводится без суммы; набранный мусор сохранять нельзя,
+  // иначе он молча превратится в ноль
+  const parsedAmount = parseAmount(amount);
+  const amountBroken = amount.trim() !== "" && Number.isNaN(parsedAmount);
+
   const create = useMutation({
     mutationFn: () =>
       api.createFundSource({
         title: title.trim(),
         currency,
-        amount: String(Number(amount.replace(",", ".")) || 0),
+        amount: String(Number.isNaN(parsedAmount) ? 0 : parsedAmount),
       }),
     onSuccess: () => {
       notify("success");
@@ -189,9 +211,14 @@ function AddSource({ onDone }: { onDone: () => void }) {
           ))}
         </select>
       </div>
+      {amountBroken ? (
+        <div className="text-[12px]" style={{ color: "var(--color-accent-700)" }}>
+          Не разобрал сумму. Можно с пробелами и запятой: 250 000 или 1 250,50.
+        </div>
+      ) : null}
       <button
         className="btn btn-primary w-full"
-        disabled={!title.trim() || create.isPending}
+        disabled={!title.trim() || amountBroken || create.isPending}
         onClick={() => {
           haptic("medium");
           create.mutate();
@@ -206,9 +233,11 @@ function AddSource({ onDone }: { onDone: () => void }) {
 function SourceRow({
   source,
   baseCurrency,
+  onOpen,
 }: {
   source: FundSource;
   baseCurrency: string;
+  onOpen: () => void;
 }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
@@ -216,7 +245,7 @@ function SourceRow({
 
   const save = useMutation({
     mutationFn: () =>
-      api.setBalance(source.id, { amount: String(Number(value.replace(",", ".")) || 0) }),
+      api.setBalance(source.id, { amount: String(parseAmount(value)) }),
     onSuccess: () => {
       notify("success");
       setEditing(false);
@@ -226,24 +255,19 @@ function SourceRow({
     onError: () => notify("error"),
   });
 
-  const archive = useMutation({
-    mutationFn: () => api.updateFundSource(source.id, { archived: true }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["funds"] }),
-  });
-
   const isBase = source.currency === baseCurrency;
 
   return (
     <div className="rule-thin py-3">
       <div className="flex items-center gap-3">
-        <div className="min-w-0 flex-1">
+        <button className="min-w-0 flex-1 text-left" onClick={() => { haptic(); onOpen(); }}>
           <div className="truncate text-[14px] font-semibold">{source.title}</div>
           <div className="text-[11px]" style={{ color: "var(--color-neutral-700)" }}>
             {source.updated_on
-              ? `обновлено ${formatDateFull(source.updated_on)}`
-              : "сумма ещё не введена"}
+              ? `обновлено ${formatDateFull(source.updated_on)} · правка и история →`
+              : "сумма ещё не введена · правка и история →"}
           </div>
-        </div>
+        </button>
         {editing ? (
           <div className="flex shrink-0 items-center gap-2">
             <input
@@ -297,15 +321,9 @@ function SourceRow({
           >
             Отмена
           </button>
-          <button
-            style={{ color: "var(--color-accent)" }}
-            onClick={() => {
-              haptic();
-              archive.mutate();
-            }}
-          >
-            Убрать источник
-          </button>
+          <span style={{ color: "var(--color-neutral-600)" }}>
+            запишется новой строкой в историю
+          </span>
         </div>
       ) : null}
     </div>

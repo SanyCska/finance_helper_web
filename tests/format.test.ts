@@ -6,6 +6,7 @@ import {
   formatDateFull,
   formatDayTitle,
   formatMonthGenitive,
+  parseAmount,
   formatMoney,
   formatMonthName,
   formatMonthTitle,
@@ -159,5 +160,29 @@ describe("вспомогательное", () => {
   it("нечисловое значение превращает в ноль", () => {
     expect(toNumber("не число")).toBe(0);
     expect(toNumber(null)).toBe(0);
+  });
+});
+
+describe("parseAmount", () => {
+  it("разбирает число с разделителем разрядов", () => {
+    expect(parseAmount("250 000")).toBe(250000);
+    // неразрывный пробел вставляет наш же форматтер сумм
+    expect(parseAmount("1\u00a0250,50")).toBe(1250.5);
+  });
+
+  it("принимает запятую как десятичный разделитель", () => {
+    expect(parseAmount("13,89")).toBe(13.89);
+    expect(parseAmount("13.89")).toBe(13.89);
+  });
+
+  it("на пустой строке и мусоре возвращает NaN, а не ноль", () => {
+    expect(parseAmount("")).toBeNaN();
+    expect(parseAmount("   ")).toBeNaN();
+    expect(parseAmount("сто рублей")).toBeNaN();
+  });
+
+  it("держит отрицательные и дробные", () => {
+    expect(parseAmount("-50")).toBe(-50);
+    expect(parseAmount("0,5")).toBe(0.5);
   });
 });

@@ -170,7 +170,8 @@ export type PlanLine = {
   currency: string;
   /** та же сумма в базовой валюте — по ней подводятся итоги */
   amount_base: string;
-  category_name: string | null;
+  /** категории трат, по которым строка сверяется с фактом; пусто — связи нет */
+  category_names: string[];
   position: number;
 };
 
@@ -188,7 +189,7 @@ export type Plan = {
 };
 
 export type PlanLineFact = PlanLine & {
-  /** факт по связанной категории; `null` — категория не выбрана */
+  /** сумма трат по всем связанным категориям; `null` — категории не выбраны */
   fact: string | null;
   diff: string | null;
 };
@@ -257,12 +258,14 @@ export type MonthCheck = {
   opening: string | null;
   closing: string | null;
   is_saved: boolean;
+  /** есть ли остаток на начало месяца; без него сверять не с чем */
+  comparable: boolean;
   note: string | null;
 };
 
 // --- подписки -------------------------------------------------------------
 
-export type RecurringKind = "subscription" | "rent";
+export type RecurringKind = "subscription" | "rent" | "other";
 
 export type Recurring = {
   id: number;
@@ -271,7 +274,10 @@ export type Recurring = {
   amount: string;
   currency: string;
   period_months: number;
-  charge_day: number;
+  /** дата списания, как её ввёл пользователь */
+  charge_on: string;
+  /** ближайшее списание не раньше сегодняшнего дня */
+  next_charge: string;
   category_name: string;
   active: boolean;
   starts_on: string;
@@ -376,7 +382,7 @@ export const api = {
       title: string;
       amount: string;
       currency?: string;
-      category_name?: string | null;
+      category_names?: string[];
     }[],
   ) => request<Plan>(`/api/plans/${month}`, { method: "PUT", body: { lines } }),
 
@@ -413,6 +419,19 @@ export const api = {
 
   balanceHistory: (id: number) => request<FundBalance[]>(`/api/funds/${id}/history`),
 
+  updateBalance: (
+    sourceId: number,
+    balanceId: number,
+    body: { amount?: string; date?: string; note?: string | null },
+  ) =>
+    request<FundBalance>(`/api/funds/${sourceId}/balance/${balanceId}`, {
+      method: "PATCH",
+      body,
+    }),
+
+  deleteBalance: (sourceId: number, balanceId: number) =>
+    request<void>(`/api/funds/${sourceId}/balance/${balanceId}`, { method: "DELETE" }),
+
   checks: () => request<MonthCheck[]>("/api/funds/checks"),
 
   check: (month: string) => request<MonthCheck>(`/api/funds/checks/${month}`),
@@ -430,7 +449,7 @@ export const api = {
     amount: string;
     currency: string;
     period_months: number;
-    charge_day: number;
+    charge_on: string;
     category_name?: string | null;
   }) => request<Recurring>("/api/recurring", { method: "POST", body }),
 
@@ -441,7 +460,7 @@ export const api = {
       amount?: string;
       currency?: string;
       period_months?: number;
-      charge_day?: number;
+      charge_on?: string;
       category_name?: string;
       active?: boolean;
     },

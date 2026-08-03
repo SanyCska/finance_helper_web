@@ -12,6 +12,20 @@ export function monthWindow(anchor: string, size: number): string[] {
   return Array.from({ length: size }, (_, index) => shiftMonth(anchor, index - size + 1));
 }
 
+/**
+ * Три месяца для переключателя на ленте.
+ *
+ * Пока выбран текущий месяц, показываем его и два прошлых — вперёд идти некуда.
+ * Как только пользователь ушёл в прошлое, выбранный месяц встаёт в середину,
+ * и справа появляется месяц, которым можно вернуться: иначе уход назад был бы
+ * дорогой в один конец.
+ */
+export function monthTabs(month: string, today: string = currentMonth()): string[] {
+  const next = shiftMonth(month, 1);
+  if (next > today) return [shiftMonth(month, -2), shiftMonth(month, -1), month];
+  return [shiftMonth(month, -1), month, next];
+}
+
 /** Можно ли двигать окно вперёд: за текущий месяц данных нет. */
 export function canGoForward(anchor: string, today: string = currentMonth()): boolean {
   return anchor < today;

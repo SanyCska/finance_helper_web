@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canGoForward,
+  monthTabs,
   monthWindow,
   selectMonthState,
   shiftWindowState,
@@ -84,5 +85,31 @@ describe("canGoForward", () => {
 
   it("разрешает движение вперёд в прошлом", () => {
     expect(canGoForward("2026-02", TODAY)).toBe(true);
+  });
+});
+
+describe("monthTabs", () => {
+  it("на текущем месяце показывает его и два прошлых", () => {
+    expect(monthTabs("2026-08", TODAY)).toEqual(["2026-06", "2026-07", "2026-08"]);
+  });
+
+  it("в прошлом ставит выбранный месяц в середину, чтобы можно было вернуться", () => {
+    expect(monthTabs("2026-06", TODAY)).toEqual(["2026-05", "2026-06", "2026-07"]);
+  });
+
+  it("шаг назад и шаг вперёд возвращают на исходный месяц", () => {
+    const back = monthTabs("2026-08", TODAY)[0];
+    expect(monthTabs(back, TODAY)).toContain("2026-07");
+    expect(monthTabs("2026-07", TODAY)).toContain("2026-08");
+  });
+
+  it("не предлагает месяцев после текущего", () => {
+    for (const month of monthTabs("2026-08", TODAY)) {
+      expect(month <= TODAY).toBe(true);
+    }
+  });
+
+  it("переходит через границу года", () => {
+    expect(monthTabs("2025-12", "2026-08")).toEqual(["2025-11", "2025-12", "2026-01"]);
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { formatMonthName, shiftMonth } from "@/lib/format";
+import { monthTabs } from "@/lib/monthWindow";
 import { haptic } from "@/lib/telegram";
 
 /** Три месяца вкладками — мокап 2b. */
@@ -11,7 +12,7 @@ export function MonthTabs({
   month: string;
   onChange: (month: string) => void;
 }) {
-  const months = [shiftMonth(month, -2), shiftMonth(month, -1), month];
+  const months = monthTabs(month);
 
   return (
     <div className="rule flex">

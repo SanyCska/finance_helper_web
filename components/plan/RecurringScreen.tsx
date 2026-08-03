@@ -3,12 +3,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { CategoryPicker } from "@/components/CategoryPicker";
 import { Screen } from "@/components/Chrome";
+import { DateField } from "@/components/DateField";
 import { PlanTabs } from "@/components/plan/PlanTabs";
 import { ErrorState, Loading } from "@/components/States";
 import { CURRENCIES } from "@/components/tx/AddScreen";
 import { api, type Recurring, type RecurringKind } from "@/lib/api";
-import { formatMoney, formatOriginal, toNumber } from "@/lib/format";
+import {
+  categoryLabel,
+  formatDayTitle,
+  formatMoney,
+  formatOriginal,
+  parseAmount,
+  toNumber,
+} from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
 import { useMonth } from "@/lib/useMonth";
 
@@ -31,6 +40,40 @@ function chargeNote(item: Recurring, baseCurrency: string): string {
   return item.currency === baseCurrency ? "в месяц" : `${original} в месяц`;
 }
 
+/** Группы экрана. Категория подставляется сама, кроме прочих трат. */
+const GROUPS: {
+  kind: RecurringKind;
+  title: string;
+  category: string;
+  hint?: string;
+  titlePlaceholder: string;
+}[] = [
+  {
+    kind: "rent",
+    title: "Аренда",
+    category: "Аренда квартиры",
+    titlePlaceholder: "Например, Квартира",
+    hint: "Постоянная трата, которая начисляется сама. Поменяешь сумму — новая пойдёт с текущего месяца, прошлые останутся как были.",
+  },
+  {
+    kind: "subscription",
+    title: "Подписки",
+    category: "Подписки",
+    titlePlaceholder: "Например, Netflix",
+  },
+  {
+    kind: "other",
+    title: "Другие постоянные траты",
+    category: "",
+    titlePlaceholder: "Например, Страховка",
+    hint: "Всё остальное, что списывается регулярно. Категорию выбери сам — без неё трата попадёт в «Без категории».",
+  },
+];
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function RecurringScreen() {
   const [month] = useMonth();
   const [adding, setAdding] = useState<RecurringKind | null>(null);
@@ -38,8 +81,6 @@ export function RecurringScreen() {
   const list = useQuery({ queryKey: ["recurring"], queryFn: () => api.recurring() });
 
   const items = list.data?.items ?? [];
-  const rent = items.filter((item) => item.kind === "rent");
-  const subscriptions = items.filter((item) => item.kind === "subscription");
   const currency = list.data?.base_currency ?? "USD";
 
   return (
@@ -70,26 +111,18 @@ export function RecurringScreen() {
             </p>
           </section>
 
-          <Group
-            title="Аренда"
-            kind="rent"
-            items={rent}
-            currency={currency}
-            adding={adding === "rent"}
-            onToggleAdd={() => setAdding(adding === "rent" ? null : "rent")}
-            hint="Постоянная трата, которая начисляется сама. Поменяешь сумму — новая пойдёт с текущего месяца, прошлые останутся как были."
-          />
-
-          <Group
-            title="Подписки"
-            kind="subscription"
-            items={subscriptions}
-            currency={currency}
-            adding={adding === "subscription"}
-            onToggleAdd={() =>
-              setAdding(adding === "subscription" ? null : "subscription")
-            }
-          />
+          {GROUPS.map((group) => (
+            <Group
+              key={group.kind}
+              group={group}
+              items={items.filter((item) => item.kind === group.kind)}
+              currency={currency}
+              adding={adding === group.kind}
+              onToggleAdd={() =>
+                setAdding(adding === group.kind ? null : group.kind)
+              }
+            />
+          ))}
         </>
       ) : null}
       <div className="h-6" />
@@ -98,26 +131,22 @@ export function RecurringScreen() {
 }
 
 function Group({
-  title,
-  kind,
+  group,
   items,
   currency,
   adding,
   onToggleAdd,
-  hint,
 }: {
-  title: string;
-  kind: RecurringKind;
+  group: (typeof GROUPS)[number];
   items: Recurring[];
   currency: string;
   adding: boolean;
   onToggleAdd: () => void;
-  hint?: string;
 }) {
   return (
     <section className="px-4 pt-4">
       <div className="mb-2 flex items-baseline justify-between">
-        <span className="heading text-[12px] tracking-[0.08em] uppercase">{title}</span>
+        <span className="heading text-[12px] tracking-[0.08em] uppercase">{group.title}</span>
         <button
           className="text-[11.5px] font-semibold"
           style={{ color: "var(--color-accent)" }}
@@ -130,13 +159,13 @@ function Group({
         </button>
       </div>
 
-      {hint && !items.length ? (
+      {group.hint && !items.length ? (
         <p className="mb-2 text-[12px] leading-[1.5]" style={{ color: "var(--color-neutral-700)" }}>
-          {hint}
+          {group.hint}
         </p>
       ) : null}
 
-      {adding ? <AddForm kind={kind} onDone={onToggleAdd} /> : null}
+      {adding ? <AddForm group={group} onDone={onToggleAdd} /> : null}
 
       {items.map((item) => (
         <Row key={item.id} item={item} currency={currency} />
@@ -151,14 +180,20 @@ function Group({
   );
 }
 
-function AddForm({ kind, onDone }: { kind: RecurringKind; onDone: () => void }) {
+function AddForm({
+  group,
+  onDone,
+}: {
+  group: (typeof GROUPS)[number];
+  onDone: () => void;
+}) {
   const queryClient = useQueryClient();
-  const [title, setTitle] = useState(kind === "rent" ? "Квартира" : "");
+  const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [period, setPeriod] = useState(1);
-  const [day, setDay] = useState("1");
-  const [category, setCategory] = useState("");
+  const [chargeOn, setChargeOn] = useState(today());
+  const [category, setCategory] = useState(group.category);
 
   const categories = useQuery({
     queryKey: ["categoryList", "all"],
@@ -168,12 +203,12 @@ function AddForm({ kind, onDone }: { kind: RecurringKind; onDone: () => void }) 
   const create = useMutation({
     mutationFn: () =>
       api.createRecurring({
-        kind,
+        kind: group.kind,
         title: title.trim(),
-        amount: String(Number(amount.replace(",", ".")) || 0),
+        amount: String(parsed),
         currency,
         period_months: period,
-        charge_day: Math.min(31, Math.max(1, Number(day) || 1)),
+        charge_on: chargeOn,
         category_name: category.trim() || null,
       }),
     onSuccess: () => {
@@ -184,13 +219,13 @@ function AddForm({ kind, onDone }: { kind: RecurringKind; onDone: () => void }) 
     onError: () => notify("error"),
   });
 
-  const parsed = Number(amount.replace(",", "."));
+  const parsed = parseAmount(amount);
 
   return (
     <div className="rule-thin flex flex-col gap-3 py-3">
       <input
         className="input"
-        placeholder={kind === "rent" ? "Например, Квартира" : "Например, Netflix"}
+        placeholder={group.titlePlaceholder}
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         autoFocus
@@ -217,46 +252,39 @@ function AddForm({ kind, onDone }: { kind: RecurringKind; onDone: () => void }) 
           ))}
         </select>
       </div>
-      <div>
-        <div className="flex gap-2">
-          <select
-            className="input flex-1"
-            value={period}
-            onChange={(event) => setPeriod(Number(event.target.value))}
-            aria-label="Периодичность"
-          >
-            {PERIODS.map((item) => (
-              <option key={item.months} value={item.months}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-          <input
-            className="input num"
-            style={{ width: 92 }}
-            inputMode="numeric"
-            value={day}
-            onChange={(event) => setDay(event.target.value)}
-            aria-label="День списания"
-          />
-        </div>
-        <div className="mt-1 flex gap-2 text-[11px]" style={{ color: "var(--color-neutral-600)" }}>
-          <span className="flex-1">как часто списывают</span>
-          <span style={{ width: 92 }}>день</span>
+      <div className="field">
+        <label>Как часто списывают</label>
+        <select
+          className="input"
+          value={period}
+          onChange={(event) => setPeriod(Number(event.target.value))}
+        >
+          {PERIODS.map((item) => (
+            <option key={item.months} value={item.months}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="field">
+        <label htmlFor={`charge-${group.kind}`}>Дата списания</label>
+        <DateField id={`charge-${group.kind}`} value={chargeOn} onChange={setChargeOn} />
+        <div className="mt-1 text-[11px]" style={{ color: "var(--color-neutral-600)" }}>
+          {period > 1
+            ? "У годовой подписки важен и месяц: по этой дате считается следующее списание."
+            : "Значим только день месяца."}
         </div>
       </div>
-      <input
-        className="input"
-        placeholder="Категория трат"
-        value={category}
-        onChange={(event) => setCategory(event.target.value)}
-        list="recurring-categories"
-      />
-      <datalist id="recurring-categories">
-        {(categories.data ?? []).map((item) => (
-          <option key={item.name} value={item.name} />
-        ))}
-      </datalist>
+      <div className="field">
+        <label>Категория трат</label>
+        <CategoryPicker
+          selected={category ? [category] : []}
+          options={(categories.data ?? []).map((item) => item.name)}
+          onChange={(next) => setCategory(next[0] ?? "")}
+          placeholder="без категории"
+          multiple={false}
+        />
+      </div>
 
       {period > 1 && parsed > 0 ? (
         <div className="text-[12px]" style={{ color: "var(--color-neutral-700)" }}>
@@ -297,7 +325,7 @@ function Row({ item, currency }: { item: Recurring; currency: string }) {
   const save = useMutation({
     mutationFn: () =>
       api.updateRecurring(item.id, {
-        amount: String(Number(amount.replace(",", ".")) || 0),
+        amount: String(parseAmount(amount)),
       }),
     onSuccess: () => {
       notify("success");
@@ -328,7 +356,8 @@ function Row({ item, currency }: { item: Recurring; currency: string }) {
             {item.title}
           </div>
           <div className="text-[11px]" style={{ color: "var(--color-neutral-700)" }}>
-            {periodLabel(item.period_months)} · {item.charge_day}-го · {item.category_name}
+            {periodLabel(item.period_months)} · спишут {formatDayTitle(item.next_charge)} ·{" "}
+            {categoryLabel(item.category_name)}
             {item.active ? "" : " · на паузе"}
           </div>
         </div>

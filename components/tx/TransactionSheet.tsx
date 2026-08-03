@@ -6,7 +6,13 @@ import { useState } from "react";
 import { DateField } from "@/components/DateField";
 import { CURRENCIES } from "@/components/tx/AddScreen";
 import { api, ApiError, type Transaction } from "@/lib/api";
-import { categoryLabel, formatDayTitle, formatOriginal, toNumber } from "@/lib/format";
+import {
+  categoryLabel,
+  formatDayTitle,
+  formatOriginal,
+  parseAmount,
+  toNumber,
+} from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
 
 function today(): string {
@@ -75,7 +81,7 @@ function EditForm({ item, onClose }: { item: Transaction; onClose: () => void })
         date,
         category_name: category,
         account_name: account,
-        amount_original: amount.replace(",", "."),
+        amount_original: String(parsedAmount),
         currency,
         direction,
         comment: comment || null,
@@ -98,7 +104,7 @@ function EditForm({ item, onClose }: { item: Transaction; onClose: () => void })
     onError: () => notify("error"),
   });
 
-  const parsedAmount = Number(amount.replace(",", "."));
+  const parsedAmount = parseAmount(amount);
   const busy = save.isPending || remove.isPending;
   const canSubmit = Number.isFinite(parsedAmount) && parsedAmount > 0 && !busy;
   const error = save.error ?? remove.error;
