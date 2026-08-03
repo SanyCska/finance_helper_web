@@ -79,7 +79,9 @@ export function CategoryPicker({
         <input
           className="min-w-[120px] flex-1 bg-transparent text-[11.5px] outline-none"
           style={{ color: "var(--color-neutral-700)" }}
-          placeholder={selected.length ? "добавить ещё" : placeholder}
+          placeholder={
+            !selected.length ? placeholder : multiple ? "добавить ещё" : "выбрать другую"
+          }
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);

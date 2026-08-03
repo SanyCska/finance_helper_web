@@ -263,7 +263,7 @@ export type MonthCheck = {
 
 // --- подписки -------------------------------------------------------------
 
-export type RecurringKind = "subscription" | "rent";
+export type RecurringKind = "subscription" | "rent" | "other";
 
 export type Recurring = {
   id: number;
@@ -272,7 +272,10 @@ export type Recurring = {
   amount: string;
   currency: string;
   period_months: number;
-  charge_day: number;
+  /** дата списания, как её ввёл пользователь */
+  charge_on: string;
+  /** ближайшее списание не раньше сегодняшнего дня */
+  next_charge: string;
   category_name: string;
   active: boolean;
   starts_on: string;
@@ -431,7 +434,7 @@ export const api = {
     amount: string;
     currency: string;
     period_months: number;
-    charge_day: number;
+    charge_on: string;
     category_name?: string | null;
   }) => request<Recurring>("/api/recurring", { method: "POST", body }),
 
@@ -442,7 +445,7 @@ export const api = {
       amount?: string;
       currency?: string;
       period_months?: number;
-      charge_day?: number;
+      charge_on?: string;
       category_name?: string;
       active?: boolean;
     },
