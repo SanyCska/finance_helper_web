@@ -192,6 +192,17 @@ textarea {
   color: var(--color-accent);
 }
 
+/* Текст нативного date-input скрыт: формат даты у него из локали ОС,
+   а нужную подпись «дд.мм.гггг» рисует DateField поверх поля. */
+.date-native {
+  color: transparent;
+  caret-color: transparent;
+}
+
+.date-native::-webkit-datetime-edit {
+  color: transparent;
+}
+
 /* горизонтально прокручиваемые блоки не должны тащить за собой страницу */
 .scroll-x {
   overflow-x: auto;

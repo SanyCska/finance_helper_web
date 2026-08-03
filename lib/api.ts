@@ -151,6 +151,9 @@ export type Income = {
   amount: string;
   note: string | null;
   is_default: boolean;
+  /** `saved` — задан на месяц, `carried` — перенесён с прошлого, `default` — из настроек */
+  source: "saved" | "carried" | "default";
+  from_month: string | null;
 };
 
 export type UserSettings = {
@@ -159,7 +162,20 @@ export type UserSettings = {
   excluded_categories: string[];
 };
 
-export type PlanLine = { id: number; title: string; amount: string; position: number };
+export type PlanLine = {
+  id: number;
+  title: string;
+  /** сумма в валюте строки */
+  amount: string;
+  currency: string;
+  /** та же сумма в базовой валюте — по ней подводятся итоги */
+  amount_base: string;
+  category_name: string | null;
+  position: number;
+};
+
+/** Откуда взялись строки: сохранённый план, черновик прошлого месяца или пусто. */
+export type PlanSource = "saved" | "previous" | "empty";
 
 export type Plan = {
   month: string;
@@ -167,6 +183,14 @@ export type Plan = {
   total: string;
   income: string;
   expected_saldo: string;
+  base_currency: string;
+  source: PlanSource;
+};
+
+export type PlanLineFact = PlanLine & {
+  /** факт по связанной категории; `null` — категория не выбрана */
+  fact: string | null;
+  diff: string | null;
 };
 
 export type PlanVsFact = {
@@ -178,12 +202,90 @@ export type PlanVsFact = {
   plan_saldo: string;
   fact_saldo: string;
   accuracy: string | null;
-  lines: PlanLine[];
+  lines: PlanLineFact[];
   categories: CategorySlice[];
+  /** факт по категориям, которых в плане не было */
+  unplanned: CategorySlice[];
   has_plan: boolean;
 };
 
 export type Category = { name: string; tx_count: number };
+
+// --- средства -------------------------------------------------------------
+
+export type FundSource = {
+  id: number;
+  title: string;
+  currency: string;
+  position: number;
+  archived: boolean;
+  /** последняя записанная сумма в валюте источника */
+  amount_original: string;
+  amount_base: string | null;
+  updated_on: string | null;
+};
+
+export type BalancePoint = { month: string; amount: string };
+
+export type Funds = {
+  base_currency: string;
+  total_base: string;
+  sources: FundSource[];
+  /** итог на конец каждого месяца окна */
+  history: BalancePoint[];
+  /** месяц, который пора сверить */
+  pending_check: string | null;
+};
+
+export type FundBalance = {
+  id: number;
+  date: string;
+  amount_original: string;
+  currency: string;
+  amount_base: string | null;
+  note: string | null;
+};
+
+export type MonthCheck = {
+  month: string;
+  /** насколько изменилась сумма всех источников за месяц */
+  real_saldo: string;
+  /** сальдо по введённым доходам и тратам */
+  tracked_saldo: string;
+  /** погрешность ведения: реальное минус учтённое */
+  discrepancy: string;
+  opening: string | null;
+  closing: string | null;
+  is_saved: boolean;
+  note: string | null;
+};
+
+// --- подписки -------------------------------------------------------------
+
+export type RecurringKind = "subscription" | "rent";
+
+export type Recurring = {
+  id: number;
+  kind: RecurringKind;
+  title: string;
+  amount: string;
+  currency: string;
+  period_months: number;
+  charge_day: number;
+  category_name: string;
+  active: boolean;
+  starts_on: string;
+  /** доля списания, попадающая в траты каждого месяца */
+  monthly_amount: string;
+  monthly_amount_base: string | null;
+};
+
+export type RecurringList = {
+  items: Recurring[];
+  base_currency: string;
+  monthly_total_base: string;
+  generated: number;
+};
 
 export type Suggestion = { title: string; amount: string };
 
@@ -268,8 +370,15 @@ export const api = {
 
   plan: (month: string) => request<Plan>(`/api/plans/${month}`),
 
-  savePlan: (month: string, lines: { title: string; amount: string }[]) =>
-    request<Plan>(`/api/plans/${month}`, { method: "PUT", body: { lines } }),
+  savePlan: (
+    month: string,
+    lines: {
+      title: string;
+      amount: string;
+      currency?: string;
+      category_name?: string | null;
+    }[],
+  ) => request<Plan>(`/api/plans/${month}`, { method: "PUT", body: { lines } }),
 
   planSuggestions: (month: string, window = 3) =>
     request<Suggestion[]>(`/api/plans/${month}/suggestions`, { query: { window } }),
@@ -283,6 +392,66 @@ export const api = {
   },
 
   backfillRates: () => request<Backfill>("/api/fx/backfill", { method: "POST" }),
+
+  // --- средства -----------------------------------------------------------
+
+  funds: (months = 12) => request<Funds>("/api/funds", { query: { months } }),
+
+  createFundSource: (body: { title: string; currency: string; amount?: string }) =>
+    request<FundSource>("/api/funds", { method: "POST", body }),
+
+  updateFundSource: (
+    id: number,
+    body: { title?: string; currency?: string; archived?: boolean },
+  ) => request<FundSource>(`/api/funds/${id}`, { method: "PATCH", body }),
+
+  deleteFundSource: (id: number) =>
+    request<void>(`/api/funds/${id}`, { method: "DELETE" }),
+
+  setBalance: (id: number, body: { amount: string; date?: string; note?: string | null }) =>
+    request<FundSource>(`/api/funds/${id}/balance`, { method: "PUT", body }),
+
+  balanceHistory: (id: number) => request<FundBalance[]>(`/api/funds/${id}/history`),
+
+  checks: () => request<MonthCheck[]>("/api/funds/checks"),
+
+  check: (month: string) => request<MonthCheck>(`/api/funds/checks/${month}`),
+
+  saveCheck: (month: string, note?: string | null) =>
+    request<MonthCheck>(`/api/funds/checks/${month}`, { method: "POST", body: { note } }),
+
+  // --- подписки -----------------------------------------------------------
+
+  recurring: () => request<RecurringList>("/api/recurring"),
+
+  createRecurring: (body: {
+    kind: RecurringKind;
+    title: string;
+    amount: string;
+    currency: string;
+    period_months: number;
+    charge_day: number;
+    category_name?: string | null;
+  }) => request<Recurring>("/api/recurring", { method: "POST", body }),
+
+  updateRecurring: (
+    id: number,
+    body: {
+      title?: string;
+      amount?: string;
+      currency?: string;
+      period_months?: number;
+      charge_day?: number;
+      category_name?: string;
+      active?: boolean;
+    },
+  ) => request<Recurring>(`/api/recurring/${id}`, { method: "PATCH", body }),
+
+  deleteRecurring: (id: number) =>
+    request<void>(`/api/recurring/${id}`, { method: "DELETE" }),
+
+  runRecurring: () =>
+    request<{ generated: number }>("/api/recurring/run", { method: "POST" }),
 };
 
 export { buildUrl as buildApiUrl };

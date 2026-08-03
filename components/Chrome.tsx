@@ -49,6 +49,7 @@ const TABS = [
   { href: "/", label: "Лента" },
   { href: "/categories", label: "Аналитика" },
   { href: "/plan", label: "План" },
+  { href: "/funds", label: "Средства" },
   { href: "/more", label: "Ещё" },
 ];
 
@@ -57,6 +58,7 @@ const SECTION_BY_PREFIX: { prefix: string; href: string }[] = [
   { prefix: "/category", href: "/categories" },
   { prefix: "/compare", href: "/categories" },
   { prefix: "/plan", href: "/plan" },
+  { prefix: "/funds", href: "/funds" },
   { prefix: "/more", href: "/more" },
   { prefix: "/transactions", href: "/" },
   { prefix: "/add", href: "/" },
@@ -85,6 +87,8 @@ export function TabBar() {
             onClick={() => haptic()}
             className="eyebrow flex-1 pt-3 pb-4 text-center"
             style={{
+              // пять вкладок: широкий трекинг «Аналитики» уже не помещается
+              letterSpacing: "0.04em",
               fontWeight: isActive ? 800 : 600,
               color: isActive ? "var(--color-accent)" : "var(--color-neutral-700)",
               borderRight:

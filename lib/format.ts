@@ -117,6 +117,13 @@ export function formatMonthTitle(month: string): string {
   return name ? `${name} ${year}` : month;
 }
 
+/** `'2026-07'` → `'июля 2026'` — для оборотов вроде «на конец июля 2026». */
+export function formatMonthGenitive(month: string): string {
+  const [year, index] = month.split("-");
+  const name = MONTHS_GENITIVE[Number(index) - 1];
+  return name ? `${name} ${year}` : month;
+}
+
 /** `'2026-07'` → `'Июль'`. */
 export function formatMonthName(month: string): string {
   const index = Number(month.split("-")[1]);
@@ -140,6 +147,13 @@ export function formatDayTitle(date: string): string {
 export function formatDayShort(date: string): string {
   const [, month, day] = date.split("-");
   return `${day}.${month}`;
+}
+
+/** `'2026-07-31'` → `'31.07.2026'` — день/месяц/год, независимо от локали ОС. */
+export function formatDateFull(date: string): string {
+  const [year, month, day] = date.split("-");
+  if (!year || !month || !day) return date;
+  return `${day}.${month}.${year}`;
 }
 
 export function currentMonth(today: Date = new Date()): string {

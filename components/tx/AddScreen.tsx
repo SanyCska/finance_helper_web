@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Screen } from "@/components/Chrome";
+import { DateField } from "@/components/DateField";
 import { api, ApiError } from "@/lib/api";
 import { categoryLabel } from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
@@ -135,14 +136,7 @@ export function AddScreen() {
 
         <div className="field">
           <label htmlFor="date">Дата</label>
-          <input
-            id="date"
-            type="date"
-            className="input"
-            value={date}
-            max={today()}
-            onChange={(event) => setDate(event.target.value)}
-          />
+          <DateField id="date" value={date} max={today()} onChange={setDate} />
         </div>
 
         <div className="field">

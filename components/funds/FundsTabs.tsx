@@ -4,12 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/plan", label: "Планирую", exact: true },
-  { href: "/plan/vs-fact", label: "План vs факт", exact: false },
-  { href: "/plan/recurring", label: "Подписки", exact: false },
+  { href: "/funds", label: "Счета", exact: true },
+  { href: "/funds/check", label: "Сверка", exact: false },
 ];
 
-export function PlanTabs({ month }: { month: string }) {
+export function FundsTabs({ month }: { month: string }) {
   const pathname = usePathname();
 
   return (
