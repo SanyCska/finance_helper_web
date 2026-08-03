@@ -19,7 +19,7 @@ import { haptic, notify } from "@/lib/telegram";
 import { useMonth } from "@/lib/useMonth";
 
 /** Валюты, в которых можно расписать план. Итоги всё равно в базовой. */
-const PLAN_CURRENCIES = ["USD", "EUR"];
+const PLAN_CURRENCIES = ["USD", "EUR", "RUB"];
 
 type Line = {
   key: string;
