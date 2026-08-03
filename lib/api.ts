@@ -170,7 +170,8 @@ export type PlanLine = {
   currency: string;
   /** та же сумма в базовой валюте — по ней подводятся итоги */
   amount_base: string;
-  category_name: string | null;
+  /** категории трат, по которым строка сверяется с фактом; пусто — связи нет */
+  category_names: string[];
   position: number;
 };
 
@@ -188,7 +189,7 @@ export type Plan = {
 };
 
 export type PlanLineFact = PlanLine & {
-  /** факт по связанной категории; `null` — категория не выбрана */
+  /** сумма трат по всем связанным категориям; `null` — категории не выбраны */
   fact: string | null;
   diff: string | null;
 };
@@ -376,7 +377,7 @@ export const api = {
       title: string;
       amount: string;
       currency?: string;
-      category_name?: string | null;
+      category_names?: string[];
     }[],
   ) => request<Plan>(`/api/plans/${month}`, { method: "PUT", body: { lines } }),
 

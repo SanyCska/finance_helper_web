@@ -104,13 +104,13 @@ export function PlanVsFactScreen() {
             {data.data.lines.map((line) => (
               <LineRow key={line.id} line={line} />
             ))}
-            {data.data.lines.every((line) => line.category_name === null) ? (
+            {data.data.lines.every((line) => !line.category_names.length) ? (
               <p
                 className="py-2 text-[11.5px] leading-[1.5]"
                 style={{ color: "var(--color-neutral-600)" }}
               >
-                Ни одна строка не связана с категорией — сравнить с фактом нечем. Категорию
-                можно выбрать под названием строки на вкладке «Планирую».
+                Ни одна строка не связана с категориями — сравнить с фактом нечем. Категории
+                выбираются под названием строки на вкладке «Планирую».
               </p>
             ) : null}
           </section>
@@ -176,9 +176,9 @@ function LineRow({ line }: { line: PlanLineFact }) {
       </div>
       <div className="mt-[2px] flex items-baseline gap-2">
         <span className="min-w-0 flex-1 truncate text-[11px]" style={{ color: "var(--color-neutral-600)" }}>
-          {line.category_name === null
-            ? "категория не выбрана"
-            : categoryLabel(line.category_name)}
+          {line.category_names.length
+            ? line.category_names.map(categoryLabel).join(", ")
+            : "категории не выбраны"}
           {line.currency === "USD"
             ? ""
             : ` · ${formatOriginal(line.amount, line.currency)}`}

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { CategoryPicker } from "@/components/CategoryPicker";
 import { Screen } from "@/components/Chrome";
 import { PlanTabs } from "@/components/plan/PlanTabs";
 import { ErrorState, Loading } from "@/components/States";
@@ -19,13 +20,18 @@ type Line = {
   title: string;
   amount: string;
   currency: string;
-  category: string;
+  categories: string[];
 };
 
 let counter = 0;
-function newLine(title = "", amount = "", currency = "USD", category = ""): Line {
+function newLine(
+  title = "",
+  amount = "",
+  currency = "USD",
+  categories: string[] = [],
+): Line {
   counter += 1;
-  return { key: `line-${counter}`, title, amount, currency, category };
+  return { key: `line-${counter}`, title, amount, currency, categories };
 }
 
 export function PlanScreen() {
@@ -55,7 +61,7 @@ export function PlanScreen() {
               line.title,
               String(Math.round(toNumber(line.amount))),
               line.currency,
-              line.category_name ?? "",
+              line.category_names,
             ),
           )
         : [newLine()],
@@ -72,7 +78,7 @@ export function PlanScreen() {
             title: line.title.trim(),
             amount: String(Number(line.amount.replace(",", ".")) || 0),
             currency: line.currency,
-            category_name: line.category.trim() || null,
+            category_names: line.categories,
           })),
       ),
     onSuccess: () => {
@@ -83,6 +89,8 @@ export function PlanScreen() {
     },
     onError: () => notify("error"),
   });
+
+  const categoryNames = (categories.data ?? []).map((item) => item.name);
 
   // до сохранения итог считаем сами: курс берём из уже пересчитанных сервером строк
   const rates = rateMap(plan.data?.lines ?? []);
@@ -166,7 +174,7 @@ export function PlanScreen() {
                         item.title,
                         String(Math.round(toNumber(item.amount))),
                         "USD",
-                        item.title,
+                        [item.title],
                       ),
                     ),
                   );
@@ -185,6 +193,7 @@ export function PlanScreen() {
               <PlanLineRow
                 key={line.key}
                 line={line}
+                categories={categoryNames}
                 onChange={(patch) => update(line.key, patch)}
                 onRemove={() => {
                   haptic();
@@ -197,12 +206,6 @@ export function PlanScreen() {
                 }}
               />
             ))}
-            <datalist id="plan-categories">
-              {(categories.data ?? []).map((item) => (
-                <option key={item.name} value={item.name} />
-              ))}
-            </datalist>
-
             <button
               className="py-3 text-[13px] font-semibold"
               style={{ color: "var(--color-accent)" }}
@@ -278,10 +281,12 @@ function rateMap(
 
 function PlanLineRow({
   line,
+  categories,
   onChange,
   onRemove,
 }: {
   line: Line;
+  categories: string[];
   onChange: (patch: Partial<Line>) => void;
   onRemove: () => void;
 }) {
@@ -322,18 +327,20 @@ function PlanLineRow({
           onChange={(event) => onChange({ amount: event.target.value })}
         />
       </div>
-      <div className="mt-1 flex items-center gap-2 pl-6">
-        <span className="shrink-0 text-[11px]" style={{ color: "var(--color-neutral-600)" }}>
-          категория
+      <div className="mt-1 flex items-start gap-2 pl-6">
+        <span
+          className="shrink-0 pt-[3px] text-[11px]"
+          style={{ color: "var(--color-neutral-600)" }}
+        >
+          категории
         </span>
-        <input
-          className="min-w-0 flex-1 bg-transparent text-[11.5px] outline-none"
-          style={{ color: line.category ? "var(--color-accent)" : "var(--color-neutral-500)" }}
-          placeholder="не связана с фактом"
-          value={line.category}
-          onChange={(event) => onChange({ category: event.target.value })}
-          list="plan-categories"
-        />
+        <div className="min-w-0 flex-1">
+          <CategoryPicker
+            selected={line.categories}
+            options={categories}
+            onChange={(next) => onChange({ categories: next })}
+          />
+        </div>
       </div>
     </div>
   );

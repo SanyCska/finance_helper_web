@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { CategoryPicker } from "@/components/CategoryPicker";
 import { Screen } from "@/components/Chrome";
 import { PlanTabs } from "@/components/plan/PlanTabs";
 import { ErrorState, Loading } from "@/components/States";
@@ -245,18 +246,16 @@ function AddForm({ kind, onDone }: { kind: RecurringKind; onDone: () => void }) 
           <span style={{ width: 92 }}>день</span>
         </div>
       </div>
-      <input
-        className="input"
-        placeholder="Категория трат"
-        value={category}
-        onChange={(event) => setCategory(event.target.value)}
-        list="recurring-categories"
-      />
-      <datalist id="recurring-categories">
-        {(categories.data ?? []).map((item) => (
-          <option key={item.name} value={item.name} />
-        ))}
-      </datalist>
+      <div className="field">
+        <label>Категория трат</label>
+        <CategoryPicker
+          selected={category ? [category] : []}
+          options={(categories.data ?? []).map((item) => item.name)}
+          onChange={(next) => setCategory(next[0] ?? "")}
+          placeholder={kind === "rent" ? "Аренда" : "Подписки"}
+          multiple={false}
+        />
+      </div>
 
       {period > 1 && parsed > 0 ? (
         <div className="text-[12px]" style={{ color: "var(--color-neutral-700)" }}>
