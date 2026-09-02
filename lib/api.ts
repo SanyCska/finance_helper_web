@@ -260,8 +260,10 @@ export type MonthCheck = {
   opening: string | null;
   closing: string | null;
   is_saved: boolean;
-  /** есть ли остаток на начало месяца; без него сверять не с чем */
+  /** есть ли точка отсчёта: остаток на начало месяца или снимок внутри него */
   comparable: boolean;
+  /** первый месяц учёта сверяется от даты первого снимка, а не с начала */
+  since: string | null;
   note: string | null;
 };
 

@@ -12,6 +12,7 @@ import { api } from "@/lib/api";
 import {
   currentMonth,
   formatMoney,
+  formatDayTitle,
   formatMonthGenitive,
   formatMonthTitle,
   formatMonthName,
@@ -76,10 +77,10 @@ export function CheckScreen() {
         />
       ) : null}
 
-      {check.data && hasSources && !check.data.comparable ? (
+      {check.data && hasSources && isRunning && !check.data.is_saved ? (
         <EmptyState
-          title="Это первый месяц учёта"
-          hint="Сверять не с чем: остатка на начало месяца нет, и вся сумма на счетах выглядела бы незаписанным доходом. Сверка появится со следующего месяца."
+          title={`${formatMonthName(month)} ещё идёт`}
+          hint="Сверять рано: доход месяца уже записан, а траты только предстоят — расхождение сейчас ничего не значит. Возвращайся, когда месяц закроется и ты обновишь суммы по счетам."
           action={
             <Link href="/funds" className="btn btn-secondary">
               К источникам
@@ -88,20 +89,20 @@ export function CheckScreen() {
         />
       ) : null}
 
-      {check.data && hasSources && check.data.comparable ? (
-        <>
-          {isRunning && !check.data.is_saved ? (
-            <section className="rule px-4 py-3" style={{ background: "var(--color-accent-100)" }}>
-              <div
-                className="text-[11.5px] leading-[1.5]"
-                style={{ color: "var(--color-accent-800)" }}
-              >
-                {formatMonthName(month)} ещё идёт — сверять его рано: доход месяца уже
-                записан, а траты только предстоят. Сверяют последний закрытый месяц.
-              </div>
-            </section>
-          ) : null}
+      {check.data && hasSources && !isRunning && !check.data.comparable ? (
+        <EmptyState
+          title="Нечего сравнивать"
+          hint="За этот месяц нет ни остатка на начало, ни введённых сумм по счетам."
+          action={
+            <Link href="/funds" className="btn btn-secondary">
+              К источникам
+            </Link>
+          }
+        />
+      ) : null}
 
+      {check.data && hasSources && check.data.comparable && (!isRunning || check.data.is_saved) ? (
+        <>
           <section className="rule px-4 py-4">
             <div className="eyebrow mb-2" style={{ color: "var(--color-accent)" }}>
               Погрешность ведения
@@ -133,8 +134,25 @@ export function CheckScreen() {
 
           {check.data.opening !== null && check.data.closing !== null ? (
             <section className="rule px-4 py-3 text-[12px] leading-[1.7]">
-              <Row label="Было на начало месяца" value={formatMoney(check.data.opening)} />
+              <Row
+                label={
+                  check.data.since
+                    ? `Было на ${formatDayTitle(check.data.since)}`
+                    : "Было на начало месяца"
+                }
+                value={formatMoney(check.data.opening)}
+              />
               <Row label="Стало на конец месяца" value={formatMoney(check.data.closing)} />
+              {check.data.since ? (
+                <div
+                  className="mt-2 text-[11px] leading-[1.5]"
+                  style={{ color: "var(--color-neutral-700)" }}
+                >
+                  Это первый месяц учёта: считаем от первой записи сумм по счетам. Что
+                  потрачено до неё, в ней уже сидит, а месячный доход дробить нечем — он
+                  засчитан целиком.
+                </div>
+              ) : null}
             </section>
           ) : null}
 
