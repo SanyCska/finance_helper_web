@@ -15,6 +15,7 @@ import {
   formatMonthGenitive,
   formatMonthTitle,
   formatMonthName,
+  shiftMonth,
   toNumber,
 } from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
@@ -27,18 +28,13 @@ export function CheckScreen() {
   const queryClient = useQueryClient();
   const [note, setNote] = useState("");
 
-  const funds = useQuery({ queryKey: ["funds", 12], queryFn: () => api.funds(12) });
-  // сверять нужно последний закрытый месяц, а не текущий: он ещё идёт, и
+  // сверяют последний закрытый месяц, а не текущий: он ещё идёт, и
   // расхождение по нему — это просто непрожитый остаток месяца
-  const [month, setMonth] = useMonth(funds.data?.pending_check);
+  const [month, setMonth] = useMonth(shiftMonth(currentMonth(), -1));
 
-  const check = useQuery({
-    queryKey: ["check", month],
-    queryFn: () => api.check(month),
-    // до ответа funds месяц ещё может смениться — не тянем сверку зря
-    enabled: !funds.isPending,
-  });
+  const check = useQuery({ queryKey: ["check", month], queryFn: () => api.check(month) });
   const history = useQuery({ queryKey: ["checks"], queryFn: () => api.checks() });
+  const funds = useQuery({ queryKey: ["funds", 12], queryFn: () => api.funds(12) });
 
   const save = useMutation({
     mutationFn: () => api.saveCheck(month, note.trim() || null),
@@ -65,7 +61,7 @@ export function CheckScreen() {
       <FundsTabs month={month} />
       <MonthStepper month={month} onChange={setMonth} />
 
-      {funds.isPending || check.isPending ? <Loading /> : null}
+      {check.isPending ? <Loading /> : null}
       {check.isError ? <ErrorState error={check.error} onRetry={() => check.refetch()} /> : null}
 
       {funds.data && !hasSources ? (
