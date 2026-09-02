@@ -14,10 +14,14 @@ import { api, type BalancePoint, type FundSource } from "@/lib/api";
 import {
   formatDateFull,
   formatMoney,
+  formatMonthName,
   formatMonthTitle,
   formatOriginal,
+  monthFromDate,
   parseAmount,
   pluralize,
+  suggestedBalanceDate,
+  toIsoDate,
   toNumber,
 } from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
@@ -250,10 +254,14 @@ function SourceRow({
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(String(toNumber(source.amount_original) || ""));
+  // в первых числах введённая сумма — это остаток на конец прошлого месяца
+  const suggested = suggestedBalanceDate();
+  const now = toIsoDate(new Date());
+  const [date, setDate] = useState(suggested);
 
   const save = useMutation({
     mutationFn: () =>
-      api.setBalance(source.id, { amount: String(parseAmount(value)) }),
+      api.setBalance(source.id, { amount: String(parseAmount(value)), date }),
     onSuccess: () => {
       notify("success");
       setEditing(false);
@@ -342,9 +350,29 @@ function SourceRow({
           >
             Отмена
           </button>
-          <span style={{ color: "var(--color-neutral-600)" }}>
-            запишется новой строкой в историю
-          </span>
+          {suggested === now ? (
+            <span style={{ color: "var(--color-neutral-600)" }}>
+              запишется новой строкой в историю
+            </span>
+          ) : (
+            <button
+              className="min-w-0 flex-1 text-left"
+              style={{ color: "var(--color-neutral-600)" }}
+              onClick={() => {
+                haptic();
+                setDate(date === suggested ? now : suggested);
+              }}
+            >
+              {date === suggested
+                ? `остаток на ${formatDateFull(suggested)} — им сверится ${formatMonthName(
+                    monthFromDate(suggested),
+                  )}`
+                : `остаток на сегодня, ${formatDateFull(now)}`}
+              <span className="ml-1" style={{ color: "var(--color-accent)" }}>
+                поменять
+              </span>
+            </button>
+          )}
         </div>
       ) : null}
     </div>

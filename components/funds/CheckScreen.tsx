@@ -9,7 +9,14 @@ import { MonthStepper } from "@/components/MonthTabs";
 import { FundsTabs } from "@/components/funds/FundsTabs";
 import { EmptyState, ErrorState, Loading } from "@/components/States";
 import { api } from "@/lib/api";
-import { formatMoney, formatMonthGenitive, formatMonthTitle, toNumber } from "@/lib/format";
+import {
+  currentMonth,
+  formatMoney,
+  formatMonthGenitive,
+  formatMonthTitle,
+  formatMonthName,
+  toNumber,
+} from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
 import { useMonth } from "@/lib/useMonth";
 
@@ -17,13 +24,21 @@ import { useMonth } from "@/lib/useMonth";
 const TOLERANCE = 25;
 
 export function CheckScreen() {
-  const [month, setMonth] = useMonth();
   const queryClient = useQueryClient();
   const [note, setNote] = useState("");
 
-  const check = useQuery({ queryKey: ["check", month], queryFn: () => api.check(month) });
-  const history = useQuery({ queryKey: ["checks"], queryFn: () => api.checks() });
   const funds = useQuery({ queryKey: ["funds", 12], queryFn: () => api.funds(12) });
+  // сверять нужно последний закрытый месяц, а не текущий: он ещё идёт, и
+  // расхождение по нему — это просто непрожитый остаток месяца
+  const [month, setMonth] = useMonth(funds.data?.pending_check);
+
+  const check = useQuery({
+    queryKey: ["check", month],
+    queryFn: () => api.check(month),
+    // до ответа funds месяц ещё может смениться — не тянем сверку зря
+    enabled: !funds.isPending,
+  });
+  const history = useQuery({ queryKey: ["checks"], queryFn: () => api.checks() });
 
   const save = useMutation({
     mutationFn: () => api.saveCheck(month, note.trim() || null),
@@ -38,6 +53,9 @@ export function CheckScreen() {
   });
 
   const hasSources = (funds.data?.sources.length ?? 0) > 0;
+  // текущий месяц ещё идёт: доход уже записан, а траты только предстоят —
+  // расхождение по нему почти всегда огромное и ничего не значит
+  const isRunning = month === currentMonth();
   const real = toNumber(check.data?.real_saldo);
   const tracked = toNumber(check.data?.tracked_saldo);
   const gap = toNumber(check.data?.discrepancy);
@@ -47,7 +65,7 @@ export function CheckScreen() {
       <FundsTabs month={month} />
       <MonthStepper month={month} onChange={setMonth} />
 
-      {check.isPending ? <Loading /> : null}
+      {funds.isPending || check.isPending ? <Loading /> : null}
       {check.isError ? <ErrorState error={check.error} onRetry={() => check.refetch()} /> : null}
 
       {funds.data && !hasSources ? (
@@ -76,6 +94,18 @@ export function CheckScreen() {
 
       {check.data && hasSources && check.data.comparable ? (
         <>
+          {isRunning && !check.data.is_saved ? (
+            <section className="rule px-4 py-3" style={{ background: "var(--color-accent-100)" }}>
+              <div
+                className="text-[11.5px] leading-[1.5]"
+                style={{ color: "var(--color-accent-800)" }}
+              >
+                {formatMonthName(month)} ещё идёт — сверять его рано: доход месяца уже
+                записан, а траты только предстоят. Сверяют последний закрытый месяц.
+              </div>
+            </section>
+          ) : null}
+
           <section className="rule px-4 py-4">
             <div className="eyebrow mb-2" style={{ color: "var(--color-accent)" }}>
               Погрешность ведения

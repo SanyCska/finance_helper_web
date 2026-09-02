@@ -14,6 +14,8 @@ import {
   formatPercent,
   pluralize,
   shiftMonth,
+  suggestedBalanceDate,
+  toIsoDate,
   toNumber,
 } from "@/lib/format";
 
@@ -184,5 +186,28 @@ describe("parseAmount", () => {
   it("держит отрицательные и дробные", () => {
     expect(parseAmount("-50")).toBe(-50);
     expect(parseAmount("0,5")).toBe(0.5);
+  });
+});
+
+describe("suggestedBalanceDate", () => {
+  it("в первых числах предлагает конец прошлого месяца", () => {
+    // остаток, введённый 2 сентября, — это состояние на конец августа
+    expect(suggestedBalanceDate(new Date(2026, 8, 2))).toBe("2026-08-31");
+    expect(suggestedBalanceDate(new Date(2026, 8, 5))).toBe("2026-08-31");
+  });
+
+  it("дальше по месяцу это уже сегодняшний остаток", () => {
+    expect(suggestedBalanceDate(new Date(2026, 8, 6))).toBe("2026-09-06");
+    expect(suggestedBalanceDate(new Date(2026, 8, 30))).toBe("2026-09-30");
+  });
+
+  it("перешагивает через год и февраль", () => {
+    expect(suggestedBalanceDate(new Date(2026, 0, 3))).toBe("2025-12-31");
+    expect(suggestedBalanceDate(new Date(2024, 2, 1))).toBe("2024-02-29");
+  });
+
+  it("берёт местную дату, а не UTC", () => {
+    // 23:30 по местному времени в UTC уже следующий день
+    expect(toIsoDate(new Date(2026, 8, 15, 23, 30))).toBe("2026-09-15");
   });
 });

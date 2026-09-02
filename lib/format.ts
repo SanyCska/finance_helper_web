@@ -207,3 +207,31 @@ export function plural(count: number, one: string, few: string, many: string): s
 export function pluralize(count: number, one: string, few: string, many: string): string {
   return `${count} ${plural(count, one, few, many)}`;
 }
+
+/** `Date` → `'2026-09-02'` по местному времени, без сдвига UTC. */
+export function toIsoDate(day: Date): string {
+  return [
+    day.getFullYear(),
+    String(day.getMonth() + 1).padStart(2, "0"),
+    String(day.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+/**
+ * Сколько первых дней месяца введённый остаток ещё читается как остаток
+ * прошлого месяца.
+ */
+export const CLOSING_DAYS = 5;
+
+/**
+ * Дата, которой стоит записать введённую сумму по счёту.
+ *
+ * Остатки сверяют в первых числах: человек заглядывает в банк 1-2 числа, но
+ * описывает этим состояние на конец прошлого месяца. Снимок с сегодняшней
+ * датой попал бы в новый месяц — прошлый остался бы сведён по устаревшим
+ * суммам, а новый показал бы движение, которого не было.
+ */
+export function suggestedBalanceDate(today: Date = new Date()): string {
+  if (today.getDate() > CLOSING_DAYS) return toIsoDate(today);
+  return toIsoDate(new Date(today.getFullYear(), today.getMonth(), 0));
+}

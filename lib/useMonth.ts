@@ -14,11 +14,14 @@ import {
 /**
  * Выбранный месяц живёт в строке запроса: так он переживает переход
  * на соседний экран и возврат по кнопке «назад».
+ *
+ * `fallback` — месяц по умолчанию для экранов, которым текущий не подходит
+ * (сверке нужен последний закрытый). Пока он не известен, берём текущий.
  */
-export function useMonth(): [string, (month: string) => void] {
+export function useMonth(fallback?: string | null): [string, (month: string) => void] {
   const params = useSearchParams();
   const router = useRouter();
-  const month = params.get("month") ?? currentMonth();
+  const month = params.get("month") ?? fallback ?? currentMonth();
 
   const setMonth = useCallback(
     (next: string) => {

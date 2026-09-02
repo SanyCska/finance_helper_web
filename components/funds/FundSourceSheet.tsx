@@ -5,11 +5,20 @@ import { useState } from "react";
 
 import { DateField } from "@/components/DateField";
 import { api, ApiError, type FundBalance, type FundSource } from "@/lib/api";
-import { formatDateFull, formatMoney, formatOriginal, parseAmount, toNumber } from "@/lib/format";
+import {
+  formatDateFull,
+  formatMoney,
+  formatOriginal,
+  parseAmount,
+  toIsoDate,
+  toNumber,
+} from "@/lib/format";
 import { haptic, notify } from "@/lib/telegram";
 
+// местная дата, а не UTC: вечером восточнее Гринвича `toISOString` даёт
+// завтрашний день, и сервер отказывал бы в дате из будущего
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return toIsoDate(new Date());
 }
 
 /**
