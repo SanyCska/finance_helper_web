@@ -1,5 +1,6 @@
 "use client";
 
+import { barPercent, barScale, type BarBaseline } from "@/lib/bars";
 import { conicGradient, donutSegments, type DonutInput } from "@/lib/donut";
 import { formatMoney, formatMonthShort, toNumber } from "@/lib/format";
 
@@ -104,15 +105,18 @@ export function MonthlyBars({
   average,
   onSelect,
   selected,
+  baseline = "zero",
 }: {
   points: { month: string; amount: string | number }[];
   currency?: string;
   average?: string | number;
   onSelect?: (month: string) => void;
   selected?: string;
+  /** «min» — для остатков: шкала от минимума окна, иначе изменение не видно */
+  baseline?: BarBaseline;
 }) {
   const values = points.map((point) => toNumber(point.amount));
-  const max = Math.max(...values, 1);
+  const scale = barScale(values, baseline);
   const averageValue = average === undefined ? null : toNumber(average);
   // если выбранный месяц вне окна, подсвечиваем последний столбец
   const highlighted = points.some((point) => point.month === selected)
@@ -126,7 +130,7 @@ export function MonthlyBars({
           <div
             className="pointer-events-none absolute right-0 left-0"
             style={{
-              bottom: `${(averageValue / max) * 100}%`,
+              bottom: `${barPercent(averageValue, scale)}%`,
               borderTop: "1px dashed var(--color-neutral-500)",
             }}
           />
@@ -144,7 +148,7 @@ export function MonthlyBars({
             >
               <span
                 style={{
-                  height: `${Math.max(2, (value / max) * 100)}%`,
+                  height: `${barPercent(value, scale)}%`,
                   background: isSelected ? "var(--color-accent)" : "var(--color-neutral-400)",
                 }}
               />

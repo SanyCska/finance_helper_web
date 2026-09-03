@@ -171,7 +171,7 @@ function Body({
           <div className="heading mb-3 text-[12px] tracking-[0.08em] uppercase">
             Как менялся баланс
           </div>
-          <MonthlyBars points={points} currency={source.currency} />
+          <MonthlyBars points={points} currency={source.currency} baseline="min" />
           <div className="mt-2 text-[11.5px]" style={{ color: "var(--color-neutral-700)" }}>
             {`с ${formatMonthGenitive(points[0].month)}: `}
             <span

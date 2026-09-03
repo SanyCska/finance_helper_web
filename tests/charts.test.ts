@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { barPercent, barScale } from "@/lib/bars";
 import { categoryColor, rankedColor, RANK_PALETTE } from "@/lib/colors";
 import { conicGradient, donutSegments } from "@/lib/donut";
 
@@ -77,5 +78,38 @@ describe("цвета категорий", () => {
 
   it("за пределами палитры цвет определяется именем", () => {
     expect(rankedColor("Хвост", 99)).toBe(categoryColor("Хвост"));
+  });
+});
+
+describe("шкала столбиков от нуля", () => {
+  it("делает высоту долей максимума", () => {
+    const scale = barScale([0, 50, 100], "zero");
+
+    expect(barPercent(100, scale)).toBe(100);
+    expect(barPercent(50, scale)).toBe(50);
+  });
+
+  it("оставляет нулю видимую полоску", () => {
+    expect(barPercent(0, barScale([0, 100], "zero"))).toBe(2);
+  });
+});
+
+describe("шкала столбиков от минимума", () => {
+  it("растягивает узкий диапазон на всю высоту", () => {
+    const scale = barScale([900, 1000, 1100], "min");
+
+    expect(barPercent(1100, scale)).toBe(100);
+    expect(barPercent(900, scale)).toBeCloseTo(12, 5);
+    expect(barPercent(1000, scale)).toBeCloseTo(56, 5);
+  });
+
+  it("ровный ряд рисует ровным, а не в потолок", () => {
+    const scale = barScale([500, 500], "min");
+
+    expect(barPercent(500, scale)).toBe(50);
+  });
+
+  it("единственная точка тоже не упирается в потолок", () => {
+    expect(barPercent(500, barScale([500], "min"))).toBe(50);
   });
 });

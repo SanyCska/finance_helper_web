@@ -104,7 +104,7 @@ export function FundsScreen() {
               <div className="heading mb-3 text-[12px] tracking-[0.08em] uppercase">
                 Как менялся баланс
               </div>
-              <MonthlyBars points={history} currency={currency} selected={month} />
+              <MonthlyBars points={history} currency={currency} selected={month} baseline="min" />
             </section>
           ) : null}
 
