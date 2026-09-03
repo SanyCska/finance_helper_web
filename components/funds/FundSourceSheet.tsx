@@ -3,10 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { MonthlyBars } from "@/components/Charts";
 import { DateField } from "@/components/DateField";
 import { api, ApiError, type FundBalance, type FundSource } from "@/lib/api";
+import { monthlyBalances } from "@/lib/fundHistory";
 import {
   formatDateFull,
+  formatMonthGenitive,
   formatMoney,
   formatOriginal,
   parseAmount,
@@ -20,6 +23,8 @@ import { haptic, notify } from "@/lib/telegram";
 function today(): string {
   return toIsoDate(new Date());
 }
+
+const HISTORY_MONTHS = 12;
 
 /**
  * Карточка источника: имя, история записей баланса и удаление.
@@ -114,6 +119,14 @@ function Body({
 
   const renamed = title.trim() !== source.title && title.trim() !== "";
 
+  // столбики от нуля почти не отличаются друг от друга, когда баланс гуляет
+  // в узком диапазоне, поэтому изменение за окно подписываем числом
+  const points = monthlyBalances(history.data ?? [], HISTORY_MONTHS);
+  const change =
+    points.length > 1
+      ? toNumber(points[points.length - 1].amount) - toNumber(points[0].amount)
+      : 0;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between">
@@ -152,6 +165,28 @@ function Body({
           остались бы в старой валюте, и итог поехал бы. Заведи новый источник.
         </div>
       </div>
+
+      {points.length > 1 ? (
+        <div>
+          <div className="heading mb-3 text-[12px] tracking-[0.08em] uppercase">
+            Как менялся баланс
+          </div>
+          <MonthlyBars points={points} currency={source.currency} />
+          <div className="mt-2 text-[11.5px]" style={{ color: "var(--color-neutral-700)" }}>
+            {`с ${formatMonthGenitive(points[0].month)}: `}
+            <span
+              className="num font-semibold"
+              style={{
+                color: change > 0 ? "var(--color-accent)" : "var(--color-text)",
+              }}
+            >
+              {change === 0
+                ? "без изменений"
+                : `${change > 0 ? "+" : "−"}${formatOriginal(Math.abs(change), source.currency)}`}
+            </span>
+          </div>
+        </div>
+      ) : null}
 
       <div>
         <div className="heading mb-2 text-[12px] tracking-[0.08em] uppercase">
