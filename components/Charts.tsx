@@ -125,7 +125,10 @@ export function MonthlyBars({
 
   return (
     <div>
-      <div className="relative flex items-end gap-[3px]" style={{ height: 150 }}>
+      {/* столбики позиционируем от низа кнопки, а не флексом внутри неё:
+          в WebKit кнопка не работает как flex-контейнер, и процентная высота
+          вложенного столбика схлопывалась в ноль — график выходил пустым */}
+      <div className="relative flex gap-[3px]" style={{ height: 150 }}>
         {averageValue !== null && averageValue > 0 ? (
           <div
             className="pointer-events-none absolute right-0 left-0"
@@ -141,12 +144,12 @@ export function MonthlyBars({
           return (
             <button
               key={point.month}
-              className="flex flex-1 flex-col justify-end"
-              style={{ height: "100%" }}
+              className="relative flex-1"
               onClick={() => onSelect?.(point.month)}
               aria-label={`${point.month}: ${formatMoney(value, { currency })}`}
             >
               <span
+                className="absolute right-0 bottom-0 left-0 block"
                 style={{
                   height: `${barPercent(value, scale)}%`,
                   background: isSelected ? "var(--color-accent)" : "var(--color-neutral-400)",
