@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 
-import { MonthlyBars } from "@/components/Charts";
+import { BalanceTrend } from "@/components/Charts";
 import { Screen } from "@/components/Chrome";
 import { CURRENCIES } from "@/components/tx/AddScreen";
 import { FundSourceSheet } from "@/components/funds/FundSourceSheet";
@@ -104,7 +104,7 @@ export function FundsScreen() {
               <div className="heading mb-3 text-[12px] tracking-[0.08em] uppercase">
                 Как менялся баланс
               </div>
-              <MonthlyBars points={history} currency={currency} selected={month} baseline="min" />
+              <BalanceTrend points={history} currency={currency} selected={month} />
             </section>
           ) : null}
 

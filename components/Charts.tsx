@@ -1,8 +1,9 @@
 "use client";
 
-import { barPercent, barScale, type BarBaseline } from "@/lib/bars";
+import { barPercent, barScale } from "@/lib/bars";
 import { conicGradient, donutSegments, type DonutInput } from "@/lib/donut";
 import { formatMoney, formatMonthShort, toNumber } from "@/lib/format";
+import { trendOffset, trendPercent, trendScale } from "@/lib/trend";
 
 /** Донат с подписью в центре — как на мокапах 2b и 2f. */
 export function Donut({
@@ -105,18 +106,15 @@ export function MonthlyBars({
   average,
   onSelect,
   selected,
-  baseline = "zero",
 }: {
   points: { month: string; amount: string | number }[];
   currency?: string;
   average?: string | number;
   onSelect?: (month: string) => void;
   selected?: string;
-  /** «min» — для остатков: шкала от минимума окна, иначе изменение не видно */
-  baseline?: BarBaseline;
 }) {
   const values = points.map((point) => toNumber(point.amount));
-  const scale = barScale(values, baseline);
+  const scale = barScale(values);
   const averageValue = average === undefined ? null : toNumber(average);
   // если выбранный месяц вне окна, подсвечиваем последний столбец
   const highlighted = points.some((point) => point.month === selected)
@@ -229,6 +227,114 @@ export function CompareRow({
         <span className="num w-14 shrink-0 text-[11px] font-semibold">
           {formatMoney(b, { currency })}
         </span>
+      </div>
+    </div>
+  );
+}
+
+
+/**
+ * Линия остатка по месяцам.
+ *
+ * Остаток — это не величина, которую сравнивают с нулём, а уровень, который
+ * куда-то движется. Столбиками такое читается неправильно: от нуля они все
+ * одинаковой высоты, а от «чуть ниже минимума» изменение в пять процентов
+ * выглядит кратным. Линия показывает направление, а подписи по краям шкалы
+ * говорят, в каких пределах она гуляет.
+ */
+export function BalanceTrend({
+  points,
+  currency,
+  selected,
+}: {
+  points: { month: string; amount: string | number }[];
+  currency?: string;
+  /** месяц, чью точку подсвечиваем; по умолчанию — последняя */
+  selected?: string;
+}) {
+  const values = points.map((point) => toNumber(point.amount));
+  const scale = trendScale(values);
+  const highlighted = points.some((point) => point.month === selected)
+    ? selected
+    : points.at(-1)?.month;
+
+  const height = 120;
+  const coords = values.map((value, index) => ({
+    x: trendOffset(index, values.length),
+    y: 100 - trendPercent(value, scale),
+  }));
+  const line = coords.map((point) => `${point.x},${point.y}`).join(" ");
+  const startLevel = values.length ? 100 - trendPercent(values[0], scale) : 50;
+
+  return (
+    <div>
+      {/* пределы окна: шкала у линии не от нуля, и это надо сказать вслух */}
+      {values.length > 1 ? (
+        <div
+          className="num mb-1 text-right text-[9px]"
+          style={{ color: "var(--color-neutral-600)" }}
+        >
+          {formatMoney(Math.min(...values), { currency })} —{" "}
+          {formatMoney(Math.max(...values), { currency })}
+        </div>
+      ) : null}
+      <div className="relative" style={{ height }}>
+        {/* уровень первого месяца: видно, вернулся остаток к нему или нет */}
+        <div
+          className="pointer-events-none absolute right-0 left-0"
+          style={{ top: `${startLevel}%`, borderTop: "1px dashed var(--color-neutral-400)" }}
+        />
+        <svg
+          className="absolute inset-0 h-full w-full overflow-visible"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden
+        >
+          <polyline
+            points={line}
+            fill="none"
+            stroke="var(--color-accent)"
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            // иначе растяжение по ширине раздавило бы линию по вертикали
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        {points.map((point, index) => {
+          const isHighlighted = point.month === highlighted;
+          const size = isHighlighted ? 9 : 5;
+          return (
+            <span
+              key={point.month}
+              className="absolute block rounded-full"
+              title={`${formatMonthShort(point.month)}: ${formatMoney(values[index], { currency })}`}
+              style={{
+                left: `${coords[index].x}%`,
+                top: `${coords[index].y}%`,
+                width: size,
+                height: size,
+                marginLeft: -size / 2,
+                marginTop: -size / 2,
+                background: isHighlighted ? "var(--color-accent)" : "var(--color-neutral-500)",
+              }}
+            />
+          );
+        })}
+      </div>
+      <div className="mt-2 flex">
+        {points.map((point) => (
+          <span
+            key={point.month}
+            className="flex-1 text-center text-[9px]"
+            style={{
+              color:
+                point.month === highlighted ? "var(--color-text)" : "var(--color-neutral-600)",
+            }}
+          >
+            {formatMonthShort(point.month)}
+          </span>
+        ))}
       </div>
     </div>
   );

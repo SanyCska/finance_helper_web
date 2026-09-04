@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { MonthlyBars } from "@/components/Charts";
+import { BalanceTrend } from "@/components/Charts";
 import { DateField } from "@/components/DateField";
 import { api, ApiError, type FundBalance, type FundSource } from "@/lib/api";
 import { monthlyBalances } from "@/lib/fundHistory";
@@ -172,7 +172,7 @@ function Body({
           <div className="heading mb-3 text-[12px] tracking-[0.08em] uppercase">
             Как менялся баланс
           </div>
-          <MonthlyBars points={points} currency={source.currency} baseline="min" />
+          <BalanceTrend points={points} currency={source.currency} />
           <div className="mt-2 text-[11.5px]" style={{ color: "var(--color-neutral-700)" }}>
             {`с ${formatMonthGenitive(points[0].month)}: `}
             <span
