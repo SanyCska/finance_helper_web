@@ -13,6 +13,7 @@ import {
   formatMoney,
   formatOriginal,
   parseAmount,
+  suggestedBalanceDate,
   toIsoDate,
   toNumber,
 } from "@/lib/format";
@@ -262,10 +263,25 @@ function BalanceRow({
   const [amount, setAmount] = useState(String(toNumber(item.amount_original)));
   const [date, setDate] = useState(item.date);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const suggested = suggestedBalanceDate();
 
   const save = useMutation({
     mutationFn: () =>
       api.updateBalance(sourceId, item.id, { amount: String(parseAmount(amount)), date }),
+    onSuccess: () => {
+      notify("success");
+      setEditing(false);
+      onDone();
+    },
+    onError: () => notify("error"),
+  });
+
+  // правка переписывает запись на месте — прошлой суммы после неё не остаётся.
+  // Когда баланс просто изменился, нужна новая строка, иначе месяц потеряет
+  // точку отсчёта и сверять его будет не с чем
+  const append = useMutation({
+    mutationFn: () =>
+      api.setBalance(sourceId, { amount: String(parseAmount(amount)), date: suggested }),
     onSuccess: () => {
       notify("success");
       setEditing(false);
@@ -284,8 +300,14 @@ function BalanceRow({
   });
 
   const parsed = parseAmount(amount);
-  const busy = save.isPending || remove.isPending;
-  const error = save.error ?? remove.error;
+  const busy = save.isPending || remove.isPending || append.isPending;
+  const error = save.error ?? remove.error ?? append.error;
+  // сумма поменялась, а дата — нет: похоже, баланс изменился, а не запись врёт
+  const looksLikeNewAmount =
+    isLatest &&
+    !Number.isNaN(parsed) &&
+    parsed !== toNumber(item.amount_original) &&
+    date === item.date;
 
   if (!editing) {
     return (
@@ -337,17 +359,45 @@ function BalanceRow({
         </div>
       ) : null}
 
+      {looksLikeNewAmount ? (
+        <div className="text-[11px] leading-[1.5]" style={{ color: "var(--color-neutral-700)" }}>
+          Баланс изменился? Записывай новой строкой — прежняя сумма останется в истории и
+          месяцу будет с чем сверяться. Правка нужна, только чтобы исправить ошибку в этой
+          записи: она перепишет её и старой суммы не останется.
+        </div>
+      ) : null}
+
       <div className="flex items-center gap-3">
         <button
           className="btn btn-primary flex-1 text-[13px]"
           disabled={Number.isNaN(parsed) || parsed < 0 || busy}
           onClick={() => {
             haptic("medium");
-            save.mutate();
+            if (looksLikeNewAmount) append.mutate();
+            else save.mutate();
           }}
         >
-          {save.isPending ? "Сохраняю…" : "Сохранить"}
+          {looksLikeNewAmount
+            ? append.isPending
+              ? "Записываю…"
+              : `Новой строкой на ${formatDateFull(suggested)}`
+            : save.isPending
+              ? "Сохраняю…"
+              : "Сохранить"}
         </button>
+        {looksLikeNewAmount ? (
+          <button
+            className="text-[11.5px]"
+            style={{ color: "var(--color-neutral-700)" }}
+            disabled={busy}
+            onClick={() => {
+              haptic();
+              save.mutate();
+            }}
+          >
+            Исправить
+          </button>
+        ) : null}
         <button
           className="text-[11.5px]"
           style={{ color: "var(--color-neutral-700)" }}

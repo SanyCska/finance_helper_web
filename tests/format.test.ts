@@ -190,14 +190,14 @@ describe("parseAmount", () => {
 });
 
 describe("suggestedBalanceDate", () => {
-  it("в первых числах предлагает конец прошлого месяца", () => {
-    // остаток, введённый 2 сентября, — это состояние на конец августа
-    expect(suggestedBalanceDate(new Date(2026, 8, 2))).toBe("2026-08-31");
-    expect(suggestedBalanceDate(new Date(2026, 8, 5))).toBe("2026-08-31");
+  it("в первую неделю предлагает конец прошлого месяца", () => {
+    // остаток, введённый 3 сентября, — это состояние на конец августа
+    expect(suggestedBalanceDate(new Date(2026, 8, 3))).toBe("2026-08-31");
+    expect(suggestedBalanceDate(new Date(2026, 8, 7))).toBe("2026-08-31");
   });
 
   it("дальше по месяцу это уже сегодняшний остаток", () => {
-    expect(suggestedBalanceDate(new Date(2026, 8, 6))).toBe("2026-09-06");
+    expect(suggestedBalanceDate(new Date(2026, 8, 8))).toBe("2026-09-08");
     expect(suggestedBalanceDate(new Date(2026, 8, 30))).toBe("2026-09-30");
   });
 
