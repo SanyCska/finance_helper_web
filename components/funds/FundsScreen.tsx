@@ -162,7 +162,8 @@ export function FundsScreen() {
 }
 
 function trimLeadingEmpty(points: BalancePoint[]): BalancePoint[] {
-  const first = points.findIndex((point) => toNumber(point.amount) > 0);
+  // долги пишут со знаком минус, так что первый известный остаток может быть и ниже нуля
+  const first = points.findIndex((point) => toNumber(point.amount) !== 0);
   return first < 0 ? [] : points.slice(first);
 }
 
@@ -205,7 +206,7 @@ function AddSource({ onDone }: { onDone: () => void }) {
         <input
           className="input num"
           inputMode="decimal"
-          placeholder="Сумма сейчас"
+          placeholder="Сумма сейчас, долг — с минусом"
           value={amount}
           onChange={(event) => setAmount(event.target.value)}
         />

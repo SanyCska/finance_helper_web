@@ -71,6 +71,11 @@ describe("formatOriginal", () => {
   it("сохраняет копейки, если они есть", () => {
     expect(formatOriginal(12.5, "EUR")).toBe(`12.50${NBSP}EUR`);
   });
+
+  it("не теряет минус у долга", () => {
+    expect(formatOriginal(-300, "USD")).toBe(`−300${NBSP}USD`);
+    expect(formatOriginal("-1250.5", "RSD")).toBe(`−1${NBSP}250.50${NBSP}RSD`);
+  });
 });
 
 describe("formatPercent", () => {
@@ -185,6 +190,8 @@ describe("parseAmount", () => {
 
   it("держит отрицательные и дробные", () => {
     expect(parseAmount("-50")).toBe(-50);
+    // типографский минус из formatMoney/formatOriginal
+    expect(parseAmount("−1 250,50")).toBe(-1250.5);
     expect(parseAmount("0,5")).toBe(0.5);
   });
 });

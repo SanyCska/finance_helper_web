@@ -66,7 +66,9 @@ export function parseAmount(value: string): number {
   const cleaned = (value ?? "")
     // обычный, неразрывный и узкий неразрывный пробел плюс апостроф
     .replace(/[\s  '’]/g, "")
-    .replace(",", ".");
+    .replace(",", ".")
+    // минус из нашего же форматтера — типографский, `Number` его не знает
+    .replace(MINUS, "-");
   if (cleaned === "") return Number.NaN;
   const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : Number.NaN;
@@ -112,9 +114,11 @@ export function formatOriginal(
   const amount = toNumber(value);
   const magnitude = Math.abs(amount);
   const fractionDigits = Number.isInteger(magnitude) ? 0 : 2;
-  return `${groupDigits(magnitude.toFixed(fractionDigits).split(".")[0])}${
+  const body = `${groupDigits(magnitude.toFixed(fractionDigits).split(".")[0])}${
     fractionDigits ? `.${magnitude.toFixed(2).split(".")[1]}` : ""
   }${NBSP}${currency}`;
+  // долг по источнику: без знака он выглядел бы как деньги на счету
+  return amount < 0 ? `${MINUS}${body}` : body;
 }
 
 export function formatPercent(

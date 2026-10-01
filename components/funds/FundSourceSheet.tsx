@@ -370,7 +370,7 @@ function BalanceRow({
       <div className="flex items-center gap-3">
         <button
           className="btn btn-primary flex-1 text-[13px]"
-          disabled={Number.isNaN(parsed) || parsed < 0 || busy}
+          disabled={Number.isNaN(parsed) || busy}
           onClick={() => {
             haptic("medium");
             if (looksLikeNewAmount) append.mutate();
