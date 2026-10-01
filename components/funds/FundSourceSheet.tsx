@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { BalanceTrend } from "@/components/Charts";
 import { DateField } from "@/components/DateField";
+import { SignToggle } from "@/components/funds/SignToggle";
 import { api, ApiError, type FundBalance, type FundSource } from "@/lib/api";
 import { monthlyBalances } from "@/lib/fundHistory";
 import {
@@ -347,6 +348,7 @@ function BalanceRow({
           onChange={(event) => setAmount(event.target.value)}
           autoFocus
         />
+        <SignToggle value={amount} onChange={setAmount} disabled={busy} />
         <span className="shrink-0 text-[12px]" style={{ color: "var(--color-neutral-700)" }}>
           {item.currency}
         </span>

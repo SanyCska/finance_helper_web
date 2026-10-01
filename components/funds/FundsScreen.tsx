@@ -9,6 +9,7 @@ import { Screen } from "@/components/Chrome";
 import { CURRENCIES } from "@/components/tx/AddScreen";
 import { FundSourceSheet } from "@/components/funds/FundSourceSheet";
 import { FundsTabs } from "@/components/funds/FundsTabs";
+import { SignToggle } from "@/components/funds/SignToggle";
 import { EmptyState, ErrorState, FxBanner, Loading } from "@/components/States";
 import { api, type BalancePoint, type FundSource } from "@/lib/api";
 import {
@@ -210,6 +211,7 @@ function AddSource({ onDone }: { onDone: () => void }) {
           value={amount}
           onChange={(event) => setAmount(event.target.value)}
         />
+        <SignToggle value={amount} onChange={setAmount} disabled={create.isPending} />
         <select
           className="input"
           style={{ width: 100 }}
@@ -294,6 +296,7 @@ function SourceRow({
               onChange={(event) => setValue(event.target.value)}
               autoFocus
             />
+            <SignToggle value={value} onChange={setValue} disabled={save.isPending} />
             <span className="text-[12px]" style={{ color: "var(--color-neutral-700)" }}>
               {source.currency}
             </span>

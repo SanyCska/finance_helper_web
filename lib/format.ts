@@ -74,6 +74,19 @@ export function parseAmount(value: string): number {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
+/**
+ * Переключает знак набранной суммы, не трогая остальной текст.
+ *
+ * Цифровая клавиатура на телефоне минуса не знает, поэтому его ставят кнопкой
+ * рядом с полем; пустую строку не трогаем — одинокий минус суммой не станет.
+ */
+export function toggleSign(value: string): string {
+  const text = value.trim();
+  if (text === "") return value;
+  const negative = text.startsWith("-") || text.startsWith(MINUS);
+  return negative ? text.slice(1) : `-${text}`;
+}
+
 export function toNumber(value: string | number | null | undefined): number {
   if (value === null || value === undefined || value === "") return 0;
   const parsed = typeof value === "number" ? value : Number(value);

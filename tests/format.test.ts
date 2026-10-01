@@ -17,6 +17,7 @@ import {
   suggestedBalanceDate,
   toIsoDate,
   toNumber,
+  toggleSign,
 } from "@/lib/format";
 
 const NBSP = " ";
@@ -216,5 +217,18 @@ describe("suggestedBalanceDate", () => {
   it("берёт местную дату, а не UTC", () => {
     // 23:30 по местному времени в UTC уже следующий день
     expect(toIsoDate(new Date(2026, 8, 15, 23, 30))).toBe("2026-09-15");
+  });
+});
+
+describe("toggleSign", () => {
+  it("ставит и снимает минус", () => {
+    expect(toggleSign("300")).toBe("-300");
+    expect(toggleSign("-300")).toBe("300");
+    expect(toggleSign("−1 250,50")).toBe("1 250,50");
+  });
+
+  it("пустую строку не трогает", () => {
+    expect(toggleSign("")).toBe("");
+    expect(toggleSign("  ")).toBe("  ");
   });
 });
